@@ -1,4 +1,4 @@
-package service
+package service_test
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/asehra/bezier/mock"
 	"github.com/asehra/bezier/model"
+	"github.com/asehra/bezier/service"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -23,7 +24,7 @@ func TestGetCardStatus(t *testing.T) {
 			}
 
 			Convey("Retrieves the card from storage", func() {
-				card, _ := GetCard(db, cardNumber)
+				card, _ := service.GetCard(db, cardNumber)
 				So(card.Number, ShouldEqual, cardNumber)
 			})
 		})
@@ -31,7 +32,7 @@ func TestGetCardStatus(t *testing.T) {
 		Convey("When storage returns error", func() {
 			Convey("GetCard service returns error", func() {
 				db.GetCardCall.Returns.Error = errors.New("Unable to find card")
-				_, err := GetCard(db, cardNumber)
+				_, err := service.GetCard(db, cardNumber)
 				So(err, ShouldNotBeNil)
 			})
 		})
