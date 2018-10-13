@@ -1,18 +1,17 @@
 package service
 
-import "github.com/asehra/bezier/model"
-
-type Storage interface {
-	StoreCard(model.Card) error
-}
+import (
+	"github.com/asehra/bezier/model"
+	"github.com/asehra/bezier/storage"
+)
 
 type IDGenerator interface {
 	Generate() int64
 }
 
-func CreateCard(storage Storage, idGenerator IDGenerator) (int64, error) {
+func CreateCard(db storage.Storage, idGenerator IDGenerator) (int64, error) {
 	cardNumber := idGenerator.Generate()
-	err := storage.StoreCard(model.Card{
+	err := db.StoreCard(model.Card{
 		Number: cardNumber,
 	})
 	return cardNumber, err
