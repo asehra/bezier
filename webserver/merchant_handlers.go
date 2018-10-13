@@ -27,6 +27,7 @@ type AuthorizeTransactionRequest struct {
 }
 type AuthorizeTransactionResponse struct {
 	TransactionID string `json:"transaction_id"`
+	Error         string `json:"error"`
 }
 
 func authorizeTransactionHandler(config config.Config) func(*gin.Context) {
@@ -36,13 +37,17 @@ func authorizeTransactionHandler(config config.Config) func(*gin.Context) {
 			c.String(http.StatusBadRequest, `{"error":"bad JSON format"}`)
 			return
 		}
-		transactionID := service.AuthorizeTransaction(
+		transactionID, err := service.AuthorizeTransaction(
 			config.DB,
 			params.CardNumber,
 			params.MerchantID,
 			params.Amount,
 			config.TransactionIDGenerator,
 		)
-		c.JSON(http.StatusOK, AuthorizeTransactionResponse{transactionID})
+		if err != nil {
+			c.JSON(http.StatusBadRequest, AuthorizeTransactionResponse{"", err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, AuthorizeTransactionResponse{transactionID, ""})
 	}
 }

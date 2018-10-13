@@ -3,6 +3,7 @@ package webserver_test
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -64,20 +65,11 @@ func TestMerchantHandlersAPI(t *testing.T) {
 			})
 			mockTransactionID := "TX88888"
 			testConfig.TransactionIDGenerator = &mock.StringIDGenerator{MockID: mockTransactionID}
-			transactionAmount := int32(50)
 
 			Convey("When card has sufficient funds", func() {
+				transactionAmount := int32(50)
 
-				requestBody := strings.NewReader(fmt.Sprintf(
-					`{
-					"card_number": %d,
-					"merchant_id": "%s",
-					"amount": %d
-				}`,
-					mockCardNumber,
-					mockMerchantID,
-					transactionAmount,
-				))
+				requestBody := authRequestBody(mockCardNumber, mockMerchantID, transactionAmount)
 				req, _ := http.NewRequest("GET", "/v1/merchant/authorize-transaction", requestBody)
 				w := httptest.NewRecorder()
 
@@ -106,6 +98,38 @@ func TestMerchantHandlersAPI(t *testing.T) {
 					So(card.BlockedBalance, ShouldEqual, 150)
 				})
 			})
+
+			Convey("When card has insufficient funds", func() {
+				transactionAmount := int32(5000)
+				requestBody := authRequestBody(mockCardNumber, mockMerchantID, transactionAmount)
+				req, _ := http.NewRequest("GET", "/v1/merchant/authorize-transaction", requestBody)
+				w := httptest.NewRecorder()
+
+				api := webserver.Create(testConfig)
+				api.ServeHTTP(w, req)
+
+				Convey("Returns 400", func() {
+					So(w.Code, ShouldEqual, 400)
+				})
+
+				Convey("Returns appropriate error in body", func() {
+					bodyAsString := w.Body.String()
+					So(bodyAsString, ShouldContainSubstring, `"error":"insufficient funds"`)
+				})
+			})
 		})
 	})
+}
+
+func authRequestBody(cardNumber int64, merchantID string, transactionAmount int32) io.Reader {
+	return strings.NewReader(fmt.Sprintf(
+		`{
+			"card_number": %d,
+			"merchant_id": "%s",
+			"amount": %d
+		}`,
+		cardNumber,
+		merchantID,
+		transactionAmount,
+	))
 }
