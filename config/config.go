@@ -8,8 +8,9 @@ import (
 )
 
 type Config struct {
-	DB          storage.Storage
-	IDGenerator generator.IDGenerator
-	StdOut      io.Writer
-	StdErr      io.Writer
+	DB                  storage.Storage
+	CardIDGenerator     generator.CardIDGenerator
+	MerchantIDGenerator generator.MerchantIDGenerator
+	StdOut              io.Writer
+	StdErr              io.Writer
 }

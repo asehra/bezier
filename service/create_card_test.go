@@ -15,7 +15,7 @@ func TestCreateCard(t *testing.T) {
 
 		Convey("When a card is created", func() {
 			expectedCardNumber := int64(9000000000000001)
-			idGenerator := &mock.IDGenerator{Generates: expectedCardNumber}
+			idGenerator := &mock.CardIDGenerator{Generates: expectedCardNumber}
 			db := &mock.Storage{}
 
 			Convey("Successfully", func() {
@@ -40,8 +40,6 @@ func TestCreateCard(t *testing.T) {
 					So(error, ShouldNotBeNil)
 				})
 			})
-
-			Convey("Pending: When another card is created", nil)
 		})
 	})
 }

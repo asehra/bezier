@@ -6,7 +6,7 @@ import (
 	"github.com/asehra/bezier/storage"
 )
 
-func CreateCard(db storage.Storage, idGenerator generator.IDGenerator) (int64, error) {
+func CreateCard(db storage.Storage, idGenerator generator.CardIDGenerator) (int64, error) {
 	cardNumber := idGenerator.Generate()
 	err := db.StoreCard(model.Card{
 		Number: cardNumber,

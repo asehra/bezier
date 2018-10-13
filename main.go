@@ -12,10 +12,11 @@ import (
 func main() {
 	webserver.Create(
 		config.Config{
-			DB:          storage.NewInMemoryStore(),
-			IDGenerator: &generator.CardID{LastID: 4921000000000000},
-			StdOut:      os.Stdout,
-			StdErr:      os.Stderr,
+			DB:                  storage.NewInMemoryStore(),
+			CardIDGenerator:     &generator.CardIDIncrementor{LastID: 4921000000000000},
+			MerchantIDGenerator: &generator.MerchantIDIncrementor{Prefix: "M", LastID: 1000},
+			StdOut:              os.Stdout,
+			StdErr:              os.Stderr,
 		},
 	).Run(":8000")
 }

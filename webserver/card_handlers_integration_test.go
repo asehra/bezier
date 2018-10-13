@@ -1,6 +1,7 @@
 package webserver_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -18,18 +19,18 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestWebServer(t *testing.T) {
+func TestCardHandlersAPI(t *testing.T) {
 	mockCardNumber := int64(9000000000000001)
 	db := storage.NewInMemoryStore()
 	testConfig := config.Config{
-		DB:          db,
-		IDGenerator: &mock.IDGenerator{Generates: mockCardNumber},
-		StdErr:      ioutil.Discard,
-		StdOut:      ioutil.Discard,
+		DB:              db,
+		CardIDGenerator: &mock.CardIDGenerator{Generates: mockCardNumber},
+		StdErr:          ioutil.Discard,
+		StdOut:          ioutil.Discard,
 	}
 
-	Convey("Create Card endpoint", t, func() {
-		req, _ := http.NewRequest("GET", "/v1/create-card", nil)
+	Convey("GET /v1/card/create", t, func() {
+		req, _ := http.NewRequest("GET", "/v1/card/create", nil)
 		w := httptest.NewRecorder()
 
 		api := webserver.Create(testConfig)
@@ -43,12 +44,19 @@ func TestWebServer(t *testing.T) {
 			bodyAsString := w.Body.String()
 			So(bodyAsString, ShouldEqual, fmt.Sprintf(`{"card_number":%d,"error":null}`, mockCardNumber))
 		})
+
+		Convey("Storage should have a card with the returned card_number", func() {
+			var response webserver.CreateCardResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			So(err, ShouldBeNil)
+			So(db.CardStore[response.CardNumber].Number, ShouldEqual, mockCardNumber)
+		})
 	})
 
-	Convey("Get Card endpoint", t, func() {
+	Convey("GET /v1/card/details", t, func() {
 		Convey("With valid card number", func() {
 			card := model.Card{Number: mockCardNumber, AvailableBalance: 1000, BlockedBalance: 500, TotalLoaded: 2000}
-			path := fmt.Sprintf(`/v1/get-card-details?card_number=%d`, card.Number)
+			path := fmt.Sprintf(`/v1/card/details?card_number=%d`, card.Number)
 			req, _ := http.NewRequest("GET", path, nil)
 			w := httptest.NewRecorder()
 			testConfig.DB.StoreCard(card)
@@ -73,7 +81,7 @@ func TestWebServer(t *testing.T) {
 		})
 
 		Convey("with invalid card number", func() {
-			path := fmt.Sprintf(`/v1/get-card-details?card_number=%d`, int64(0))
+			path := fmt.Sprintf(`/v1/card/details?card_number=%d`, int64(0))
 			req, _ := http.NewRequest("GET", path, nil)
 			w := httptest.NewRecorder()
 			api := webserver.Create(testConfig)
@@ -90,7 +98,7 @@ func TestWebServer(t *testing.T) {
 		})
 
 		Convey("with no card number", func() {
-			req, _ := http.NewRequest("GET", "/v1/get-card-details?card_number=", nil)
+			req, _ := http.NewRequest("GET", "/v1/card/details?card_number=", nil)
 			w := httptest.NewRecorder()
 			api := webserver.Create(testConfig)
 			api.ServeHTTP(w, req)
@@ -106,12 +114,12 @@ func TestWebServer(t *testing.T) {
 		})
 	})
 
-	Convey("TopUp Card endpoint", t, func() {
+	Convey("POST /v1/card/top-up", t, func() {
 		Convey("With valid json request body", func() {
 			card := model.Card{Number: mockCardNumber, AvailableBalance: 500}
 			db.StoreCard(card)
 			data := fmt.Sprintf(`{"card_number":%d,"amount":%d}`, card.Number, 1000)
-			req, _ := http.NewRequest("POST", "/v1/top-up", strings.NewReader(data))
+			req, _ := http.NewRequest("POST", "/v1/card/top-up", strings.NewReader(data))
 			w := httptest.NewRecorder()
 
 			api := webserver.Create(testConfig)
@@ -128,7 +136,7 @@ func TestWebServer(t *testing.T) {
 		})
 
 		Convey("With invalid json request body", func() {
-			req, _ := http.NewRequest("POST", "/v1/top-up", strings.NewReader("bad json"))
+			req, _ := http.NewRequest("POST", "/v1/card/top-up", strings.NewReader("bad json"))
 			w := httptest.NewRecorder()
 
 			api := webserver.Create(testConfig)
@@ -145,7 +153,7 @@ func TestWebServer(t *testing.T) {
 
 		Convey("With bad card details in body", func() {
 			data := fmt.Sprintf(`{"card_number":%d,"amount":%d}`, int64(10), 1000)
-			req, _ := http.NewRequest("POST", "/v1/top-up", strings.NewReader(data))
+			req, _ := http.NewRequest("POST", "/v1/card/top-up", strings.NewReader(data))
 			w := httptest.NewRecorder()
 
 			api := webserver.Create(testConfig)

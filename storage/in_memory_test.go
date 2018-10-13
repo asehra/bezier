@@ -14,6 +14,8 @@ func TestInMemoryStorage(t *testing.T) {
 	db := storage.NewInMemoryStore()
 	cardNumber := int64(9)
 	card := model.Card{Number: cardNumber}
+	merchantID := "Merchant ID"
+	merchant := model.Merchant{ID: merchantID}
 
 	Convey("StoreCard", t, func() {
 		Convey("Updates in memory Card store", func() {
@@ -33,6 +35,14 @@ func TestInMemoryStorage(t *testing.T) {
 		Convey("Returns error when it doesn't exist", func() {
 			_, err := db.GetCard(int64(10))
 			So(err, ShouldResemble, errors.New("Card not found"))
+		})
+	})
+
+	Convey("StoreMerchant", t, func() {
+		Convey("Updates in memory Merchant store", func() {
+			err := db.StoreMerchant(merchant)
+			So(db.MerchantStore[merchantID], ShouldResemble, merchant)
+			So(err, ShouldBeNil)
 		})
 	})
 }

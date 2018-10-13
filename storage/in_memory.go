@@ -7,12 +7,14 @@ import (
 )
 
 type InMemory struct {
-	CardStore map[int64]model.Card
+	CardStore     map[int64]model.Card
+	MerchantStore map[string]model.Merchant
 }
 
 func NewInMemoryStore() *InMemory {
 	return &InMemory{
-		CardStore: map[int64]model.Card{},
+		CardStore:     map[int64]model.Card{},
+		MerchantStore: map[string]model.Merchant{},
 	}
 }
 
@@ -27,4 +29,9 @@ func (i *InMemory) GetCard(cardNumber int64) (model.Card, error) {
 		return model.Card{}, errors.New("Card not found")
 	}
 	return card, nil
+}
+
+func (i *InMemory) StoreMerchant(merchant model.Merchant) error {
+	i.MerchantStore[merchant.ID] = merchant
+	return nil
 }
