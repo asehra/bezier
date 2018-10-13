@@ -10,10 +10,10 @@ type IDGenerator interface {
 	Generate() int64
 }
 
-func CreateCard(storage Storage, idGenerator IDGenerator) int64 {
+func CreateCard(storage Storage, idGenerator IDGenerator) (int64, error) {
 	cardNumber := idGenerator.Generate()
-	storage.StoreCard(model.Card{
+	err := storage.StoreCard(model.Card{
 		Number: cardNumber,
 	})
-	return cardNumber
+	return cardNumber, err
 }
