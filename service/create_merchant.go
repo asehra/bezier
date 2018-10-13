@@ -10,6 +10,7 @@ func CreateMerchant(db storage.Storage, idGenerator generator.MerchantIDGenerato
 	merchantID := idGenerator.Generate()
 	err := db.StoreMerchant(model.Merchant{
 		ID: merchantID,
+		AuthorizedTransactions: []model.Transaction{},
 	})
 	return merchantID, err
 }

@@ -28,6 +28,15 @@ type Storage struct {
 			Error error
 		}
 	}
+	GetMerchantCall struct {
+		Receives struct {
+			MerchantID string
+		}
+		Returns struct {
+			Merchant model.Merchant
+			Error    error
+		}
+	}
 }
 
 func (s *Storage) StoreCard(card model.Card) error {
@@ -42,4 +51,8 @@ func (s *Storage) GetCard(cardNumber int64) (model.Card, error) {
 func (s *Storage) StoreMerchant(merchant model.Merchant) error {
 	s.StoreMerchantCall.Receives.Merchant = merchant
 	return s.StoreMerchantCall.Returns.Error
+}
+
+func (s *Storage) GetMerchant(MerchantID string) (model.Merchant, error) {
+	return s.GetMerchantCall.Returns.Merchant, s.GetMerchantCall.Returns.Error
 }

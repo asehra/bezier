@@ -7,3 +7,7 @@ type CardIDGenerator interface {
 type MerchantIDGenerator interface {
 	Generate() string
 }
+
+type StringIDGenerator interface {
+	Generate() string
+}

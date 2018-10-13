@@ -6,7 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"github.com/asehra/bezier/model"
 
 	"github.com/asehra/bezier/config"
 	"github.com/asehra/bezier/mock"
@@ -16,38 +19,93 @@ import (
 )
 
 func TestMerchantHandlersAPI(t *testing.T) {
-	mockMerchantID := "M012345"
-	// mockCardNumber := int64(9000000000000001)
-	db := storage.NewInMemoryStore()
-	testConfig := config.Config{
-		DB: db,
-		// CardIDGenerator:     &mock.CardIDGenerator{Generates: mockCardNumber},
-		MerchantIDGenerator: &mock.MerchantIDGenerator{Generates: mockMerchantID},
-		StdErr:              ioutil.Discard,
-		StdOut:              ioutil.Discard,
-	}
+	Convey("Merchant Actions", t, func() {
+		mockMerchantID := "M012345"
+		db := storage.NewInMemoryStore()
+		testConfig := config.Config{
+			DB: db,
+			// CardIDGenerator:     &mock.CardIDGenerator{Generates: mockCardNumber},
+			MerchantIDGenerator: &mock.StringIDGenerator{MockID: mockMerchantID},
+			StdErr:              ioutil.Discard,
+			StdOut:              ioutil.Discard,
+		}
 
-	Convey("GET /v1/merchant/create", t, func() {
-		req, _ := http.NewRequest("GET", "/v1/merchant/create", nil)
-		w := httptest.NewRecorder()
+		Convey("GET /v1/merchant/create", func() {
+			req, _ := http.NewRequest("GET", "/v1/merchant/create", nil)
+			w := httptest.NewRecorder()
 
-		api := webserver.Create(testConfig)
-		api.ServeHTTP(w, req)
+			api := webserver.Create(testConfig)
+			api.ServeHTTP(w, req)
 
-		Convey("Returns 200 status code", func() {
-			So(w.Code, ShouldEqual, 200)
+			Convey("Returns 200 status code", func() {
+				So(w.Code, ShouldEqual, 200)
+			})
+
+			Convey("Returns merchant ID in body", func() {
+				bodyAsString := w.Body.String()
+				So(bodyAsString, ShouldEqual, fmt.Sprintf(`{"merchant_id":"%s","error":null}`, mockMerchantID))
+			})
+
+			Convey("Storage should have a merchant with the returned merchant_id", func() {
+				var response webserver.CreateMerchantResponse
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				So(err, ShouldBeNil)
+				So(db.MerchantStore[response.MerchantID].ID, ShouldEqual, mockMerchantID)
+			})
 		})
 
-		Convey("Returns merchant ID in body", func() {
-			bodyAsString := w.Body.String()
-			So(bodyAsString, ShouldEqual, fmt.Sprintf(`{"merchant_id":"%s","error":null}`, mockMerchantID))
-		})
+		Convey("POST /v1/merchant/transaction-authorization-request", func() {
+			mockCardNumber := int64(9000000000000001)
+			db.StoreMerchant(model.Merchant{mockMerchantID, []model.Transaction{}})
+			db.StoreCard(model.Card{
+				Number:           mockCardNumber,
+				AvailableBalance: 1000,
+				BlockedBalance:   100,
+			})
+			mockTransactionID := "TX88888"
+			testConfig.TransactionIDGenerator = &mock.StringIDGenerator{MockID: mockTransactionID}
+			transactionAmount := int32(50)
 
-		Convey("Storage should have a merchant with the returned merchant_id", func() {
-			var response webserver.CreateMerchantResponse
-			err := json.Unmarshal(w.Body.Bytes(), &response)
-			So(err, ShouldBeNil)
-			So(db.MerchantStore[response.MerchantID].ID, ShouldEqual, mockMerchantID)
+			Convey("When card has sufficient funds", func() {
+
+				requestBody := strings.NewReader(fmt.Sprintf(
+					`{
+					"card_number": %d,
+					"merchant_id": "%s",
+					"amount": %d
+				}`,
+					mockCardNumber,
+					mockMerchantID,
+					transactionAmount,
+				))
+				req, _ := http.NewRequest("GET", "/v1/merchant/authorize-transaction", requestBody)
+				w := httptest.NewRecorder()
+
+				api := webserver.Create(testConfig)
+				api.ServeHTTP(w, req)
+
+				Convey("Returns 200 status code", func() {
+					So(w.Code, ShouldEqual, 200)
+				})
+
+				Convey("Adds transaction to Merchant's Authorized Transactions List", func() {
+					merchant, err := db.GetMerchant(mockMerchantID)
+					So(err, ShouldBeNil)
+					So(merchant.AuthorizedTransactions, ShouldResemble, []model.Transaction{{mockTransactionID, mockCardNumber, transactionAmount}})
+				})
+
+				Convey("Returns transaction ID in body", func() {
+					bodyAsString := w.Body.String()
+					So(bodyAsString, ShouldContainSubstring, fmt.Sprintf(`"transaction_id":"%s"`, mockTransactionID))
+				})
+
+				Convey("Moves funds from AvailableBalance to BlockedBalance on card", func() {
+					card, err := db.GetCard(mockCardNumber)
+					So(err, ShouldBeNil)
+					So(card.AvailableBalance, ShouldEqual, 950)
+					So(card.BlockedBalance, ShouldEqual, 150)
+				})
+			})
 		})
 	})
 }

@@ -8,10 +8,10 @@ func (i *CardIDGenerator) Generate() int64 {
 	return i.Generates
 }
 
-type MerchantIDGenerator struct {
-	Generates string
+type StringIDGenerator struct {
+	MockID string
 }
 
-func (i *MerchantIDGenerator) Generate() string {
-	return i.Generates
+func (i *StringIDGenerator) Generate() string {
+	return i.MockID
 }

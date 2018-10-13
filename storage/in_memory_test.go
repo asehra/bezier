@@ -45,4 +45,17 @@ func TestInMemoryStorage(t *testing.T) {
 			So(err, ShouldBeNil)
 		})
 	})
+
+	Convey("GetMerchant", t, func() {
+		Convey("Fetches merchant when exists", func() {
+			db.MerchantStore[merchantID] = merchant
+			merchant, err := db.GetMerchant(merchantID)
+			So(err, ShouldBeNil)
+			So(merchant, ShouldResemble, merchant)
+		})
+		Convey("Returns error when it doesn't exist", func() {
+			_, err := db.GetMerchant("Not a merchant")
+			So(err, ShouldResemble, errors.New("Merchant not found"))
+		})
+	})
 }

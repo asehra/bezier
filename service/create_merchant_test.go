@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/asehra/bezier/mock"
+	"github.com/asehra/bezier/model"
 	"github.com/asehra/bezier/service"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -15,7 +16,7 @@ func TestCreateMerchant(t *testing.T) {
 
 		Convey("When a merchant is created", func() {
 			expectedMerchantID := "M1034"
-			idGenerator := &mock.MerchantIDGenerator{Generates: expectedMerchantID}
+			idGenerator := &mock.StringIDGenerator{MockID: expectedMerchantID}
 			db := &mock.Storage{}
 
 			Convey("Successfully", func() {
@@ -26,6 +27,7 @@ func TestCreateMerchant(t *testing.T) {
 
 				Convey("Stores the new merchant on the storage with a generated ID", func() {
 					So(db.StoreMerchantCall.Receives.Merchant.ID, ShouldEqual, expectedMerchantID)
+					So(db.StoreMerchantCall.Receives.Merchant.AuthorizedTransactions, ShouldResemble, []model.Transaction{})
 				})
 			})
 

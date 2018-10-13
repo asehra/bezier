@@ -35,3 +35,11 @@ func (i *InMemory) StoreMerchant(merchant model.Merchant) error {
 	i.MerchantStore[merchant.ID] = merchant
 	return nil
 }
+
+func (i *InMemory) GetMerchant(merchantID string) (model.Merchant, error) {
+	merchant, ok := i.MerchantStore[merchantID]
+	if !ok {
+		return model.Merchant{}, errors.New("Merchant not found")
+	}
+	return merchant, nil
+}
