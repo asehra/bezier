@@ -8,6 +8,7 @@ func TopUpCard(db storage.Storage, cardNumber int64, amount int32) error {
 		return err
 	}
 	card.AvailableBalance = card.AvailableBalance + amount
+	card.TotalLoaded = card.TotalLoaded + amount
 	err = db.StoreCard(card)
 	if err != nil {
 		return err

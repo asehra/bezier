@@ -47,7 +47,7 @@ func TestWebServer(t *testing.T) {
 
 	Convey("Get Card endpoint", t, func() {
 		Convey("With valid card number", func() {
-			card := model.Card{Number: mockCardNumber, AvailableBalance: 1000}
+			card := model.Card{Number: mockCardNumber, AvailableBalance: 1000, BlockedBalance: 500, TotalLoaded: 2000}
 			path := fmt.Sprintf(`/v1/get-card-details?card_number=%d`, card.Number)
 			req, _ := http.NewRequest("GET", path, nil)
 			w := httptest.NewRecorder()
@@ -61,7 +61,14 @@ func TestWebServer(t *testing.T) {
 
 			Convey("Returns card details in body", func() {
 				bodyAsString := w.Body.String()
-				So(bodyAsString, ShouldContainSubstring, fmt.Sprintf(`{"card_number":%d,"available_balance":%d}`, card.Number, card.AvailableBalance))
+				expectedBody := fmt.Sprintf(
+					`"card_number":%d,"available_balance":%d,"blocked_balance":%d,"total_loaded":%d`,
+					card.Number,
+					card.AvailableBalance,
+					card.BlockedBalance,
+					card.TotalLoaded,
+				)
+				So(bodyAsString, ShouldContainSubstring, expectedBody)
 			})
 		})
 
@@ -99,7 +106,7 @@ func TestWebServer(t *testing.T) {
 		})
 	})
 
-	Convey("Topup Card endpoint", t, func() {
+	Convey("TopUp Card endpoint", t, func() {
 		Convey("With valid json request body", func() {
 			card := model.Card{Number: mockCardNumber, AvailableBalance: 500}
 			db.StoreCard(card)

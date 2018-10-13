@@ -22,13 +22,15 @@ func TestTopUpCard(t *testing.T) {
 
 			Convey("It's available balance is incremented by the amount", func() {
 				testCases := []struct {
-					Description     string
-					Amount          int32
-					InitialBalance  int32
-					ExpectedBalance int32
+					Description         string
+					Amount              int32
+					InitialBalance      int32
+					ExpectedBalance     int32
+					InitialTotalLoaded  int32
+					ExpectedTotalLoaded int32
 				}{
-					{"zero balance", 5000, 0, 5000},
-					{"non-zero", 5000, 100, 5100},
+					{"zero balance", 5000, 0, 5000, 1000, 6000},
+					{"non-zero", 5000, 100, 5100, 2000, 7000},
 				}
 
 				for _, testCase := range testCases {
@@ -36,11 +38,13 @@ func TestTopUpCard(t *testing.T) {
 						db.GetCardCall.Returns.Card = model.Card{
 							Number:           cardNumber,
 							AvailableBalance: testCase.InitialBalance,
+							TotalLoaded:      testCase.InitialTotalLoaded,
 						}
 
 						err := service.TopUpCard(db, cardNumber, testCase.Amount)
 						So(err, ShouldBeNil)
 						So(db.StoreCardCall.Receives.Card.AvailableBalance, ShouldEqual, testCase.ExpectedBalance)
+						So(db.StoreCardCall.Receives.Card.TotalLoaded, ShouldEqual, testCase.ExpectedTotalLoaded)
 					})
 				}
 			})
