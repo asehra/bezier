@@ -26,16 +26,9 @@
 [[projects]]
   name = "github.com/smartystreets/goconvey"
   packages = [
-    ".",
+    "convey",
     "convey/gotest",
-    "convey/reporting",
-    "web/server/api",
-    "web/server/contract",
-    "web/server/executor",
-    "web/server/messaging",
-    "web/server/parser",
-    "web/server/system",
-    "web/server/watch"
+    "convey/reporting"
   ]
   revision = "9e8dc3f972df6c8fcc0375ef492c24d0bb204857"
   version = "1.6.3"
@@ -43,6 +36,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "314569010c15fe9f6761cd4632823e94f32f3bf880feaadfb3473f84e9c7c3bb"
+  inputs-digest = "40aa5c474be7fa9b112d50c33840db70c043b8124560d0344fc6721fde86f67a"
   solver-name = "gps-cdcl"
   solver-version = 1
