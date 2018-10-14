@@ -21,6 +21,7 @@ import (
 
 func TestMerchantHandlersAPI(t *testing.T) {
 	Convey("Merchant Actions", t, func() {
+		mockCardNumber := int64(9000000000000001)
 		mockMerchantID := "M012345"
 		db := storage.NewInMemoryStore()
 		testConfig := config.Config{
@@ -57,8 +58,81 @@ func TestMerchantHandlersAPI(t *testing.T) {
 			})
 		})
 
+		Convey("GET /v1/merchant/transactions", func() {
+			path := fmt.Sprintf("/v1/merchant/transactions?merchant_id=%s", mockMerchantID)
+			req, _ := http.NewRequest("GET", path, nil)
+			w := httptest.NewRecorder()
+
+			merchant := model.Merchant{
+				ID: mockMerchantID,
+				AuthorizedTransactions: []model.Transaction{
+					{
+						ID:         "TX101",
+						CardNumber: mockCardNumber,
+						Amount:     100,
+					},
+				},
+			}
+			err := db.StoreMerchant(merchant)
+			So(err, ShouldBeNil)
+
+			Convey("with a valid merchant ID", func() {
+				api := webserver.Create(testConfig)
+				api.ServeHTTP(w, req)
+
+				Convey("Returns 200 status code", func() {
+					So(w.Code, ShouldEqual, 200)
+				})
+
+				Convey("Returns the transaction activity by a merchant", func() {
+					var response webserver.MerchantTransactionsResponse
+					err := json.Unmarshal(w.Body.Bytes(), &response)
+					So(err, ShouldBeNil)
+					So(response.Merchant, ShouldResemble, merchant)
+				})
+			})
+
+			Convey("with invalid merchant ID", func() {
+				path := fmt.Sprintf(`/v1/merchant/transactions?merchant_id=%d`, int64(0))
+				req, _ := http.NewRequest("GET", path, nil)
+				w := httptest.NewRecorder()
+				api := webserver.Create(testConfig)
+				api.ServeHTTP(w, req)
+
+				Convey("Returns 400 status code", func() {
+					So(w.Code, ShouldEqual, 400)
+				})
+
+				Convey("Returns error in body", func() {
+					var response webserver.MerchantTransactionsResponse
+
+					err := json.Unmarshal(w.Body.Bytes(), &response)
+					So(err, ShouldBeNil)
+					So(response.Error, ShouldEqual, "Merchant not found")
+				})
+			})
+
+			Convey("with no merchant ID", func() {
+				req, _ := http.NewRequest("GET", "/v1/merchant/transactions?merchant_id=", nil)
+				w := httptest.NewRecorder()
+				api := webserver.Create(testConfig)
+				api.ServeHTTP(w, req)
+
+				Convey("Returns 400 status code", func() {
+					So(w.Code, ShouldEqual, 400)
+				})
+
+				Convey("Returns error in body", func() {
+					var response webserver.MerchantTransactionsResponse
+
+					err := json.Unmarshal(w.Body.Bytes(), &response)
+					So(err, ShouldBeNil)
+					So(response.Error, ShouldEqual, "Bad merchant ID format")
+				})
+			})
+		})
+
 		Convey("POST /v1/merchant/transaction-authorization-request", func() {
-			mockCardNumber := int64(9000000000000001)
 			db.StoreMerchant(model.Merchant{mockMerchantID, []model.Transaction{}})
 			db.StoreCard(model.Card{
 				Number:           mockCardNumber,

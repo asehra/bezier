@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/asehra/bezier/config"
+	"github.com/asehra/bezier/model"
 	"github.com/asehra/bezier/service"
 	"github.com/gin-gonic/gin"
 )
@@ -49,5 +50,26 @@ func authorizeTransactionHandler(config config.Config) func(*gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, AuthorizeTransactionResponse{transactionID, ""})
+	}
+}
+
+type MerchantTransactionsResponse struct {
+	Merchant model.Merchant `json:"merchant_activity"`
+	Error    string         `json:"error"`
+}
+
+func merchantTransactionsHandler(config config.Config) func(*gin.Context) {
+	return func(c *gin.Context) {
+		merchantID := c.Query("merchant_id")
+		if merchantID == "" {
+			c.JSON(http.StatusBadRequest, MerchantTransactionsResponse{model.Merchant{}, "Bad merchant ID format"})
+			return
+		}
+		merchant, err := service.GetMerchant(config.DB, merchantID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, MerchantTransactionsResponse{merchant, err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, MerchantTransactionsResponse{merchant, ""})
 	}
 }
