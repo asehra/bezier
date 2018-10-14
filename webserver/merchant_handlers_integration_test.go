@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -33,24 +31,20 @@ func TestMerchantHandlersAPI(t *testing.T) {
 		}
 
 		Convey("GET /v1/merchant/create", func() {
-			req, _ := http.NewRequest("GET", "/v1/merchant/create", nil)
-			w := httptest.NewRecorder()
-
-			api := webserver.Create(testConfig)
-			api.ServeHTTP(w, req)
+			output := simulateGet(testConfig, "/v1/merchant/create")
 
 			Convey("Returns 200 status code", func() {
-				So(w.Code, ShouldEqual, 200)
+				So(output.Code, ShouldEqual, 200)
 			})
 
 			Convey("Returns merchant ID in body", func() {
-				bodyAsString := w.Body.String()
+				bodyAsString := output.Body.String()
 				So(bodyAsString, ShouldEqual, fmt.Sprintf(`{"merchant_id":"%s","error":null}`, mockMerchantID))
 			})
 
 			Convey("Storage should have a merchant with the returned merchant_id", func() {
 				var response webserver.CreateMerchantResponse
-				err := json.Unmarshal(w.Body.Bytes(), &response)
+				err := json.Unmarshal(output.Body.Bytes(), &response)
 				So(err, ShouldBeNil)
 				merchant, err := db.GetMerchant(response.MerchantID)
 				So(err, ShouldBeNil)
@@ -59,10 +53,6 @@ func TestMerchantHandlersAPI(t *testing.T) {
 		})
 
 		Convey("GET /v1/merchant/transactions", func() {
-			path := fmt.Sprintf("/v1/merchant/transactions?merchant_id=%s", mockMerchantID)
-			req, _ := http.NewRequest("GET", path, nil)
-			w := httptest.NewRecorder()
-
 			merchant := model.Merchant{
 				ID: mockMerchantID,
 				AuthorizedTransactions: []model.Transaction{
@@ -77,16 +67,16 @@ func TestMerchantHandlersAPI(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("with a valid merchant ID", func() {
-				api := webserver.Create(testConfig)
-				api.ServeHTTP(w, req)
+				path := fmt.Sprintf("/v1/merchant/transactions?merchant_id=%s", mockMerchantID)
+				output := simulateGet(testConfig, path)
 
 				Convey("Returns 200 status code", func() {
-					So(w.Code, ShouldEqual, 200)
+					So(output.Code, ShouldEqual, 200)
 				})
 
 				Convey("Returns the transaction activity by a merchant", func() {
 					var response webserver.MerchantTransactionsResponse
-					err := json.Unmarshal(w.Body.Bytes(), &response)
+					err := json.Unmarshal(output.Body.Bytes(), &response)
 					So(err, ShouldBeNil)
 					So(response.Merchant, ShouldResemble, merchant)
 				})
@@ -94,38 +84,32 @@ func TestMerchantHandlersAPI(t *testing.T) {
 
 			Convey("with invalid merchant ID", func() {
 				path := fmt.Sprintf(`/v1/merchant/transactions?merchant_id=%d`, int64(0))
-				req, _ := http.NewRequest("GET", path, nil)
-				w := httptest.NewRecorder()
-				api := webserver.Create(testConfig)
-				api.ServeHTTP(w, req)
+				output := simulateGet(testConfig, path)
 
 				Convey("Returns 400 status code", func() {
-					So(w.Code, ShouldEqual, 400)
+					So(output.Code, ShouldEqual, 400)
 				})
 
 				Convey("Returns error in body", func() {
 					var response webserver.MerchantTransactionsResponse
 
-					err := json.Unmarshal(w.Body.Bytes(), &response)
+					err := json.Unmarshal(output.Body.Bytes(), &response)
 					So(err, ShouldBeNil)
 					So(response.Error, ShouldEqual, "Merchant not found")
 				})
 			})
 
 			Convey("with no merchant ID", func() {
-				req, _ := http.NewRequest("GET", "/v1/merchant/transactions?merchant_id=", nil)
-				w := httptest.NewRecorder()
-				api := webserver.Create(testConfig)
-				api.ServeHTTP(w, req)
+				output := simulateGet(testConfig, "/v1/merchant/transactions?merchant_id=")
 
 				Convey("Returns 400 status code", func() {
-					So(w.Code, ShouldEqual, 400)
+					So(output.Code, ShouldEqual, 400)
 				})
 
 				Convey("Returns error in body", func() {
 					var response webserver.MerchantTransactionsResponse
 
-					err := json.Unmarshal(w.Body.Bytes(), &response)
+					err := json.Unmarshal(output.Body.Bytes(), &response)
 					So(err, ShouldBeNil)
 					So(response.Error, ShouldEqual, "Bad merchant ID format")
 				})
@@ -146,14 +130,10 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				transactionAmount := int32(50)
 
 				requestBody := authRequestBody(mockCardNumber, mockMerchantID, transactionAmount)
-				req, _ := http.NewRequest("POST", "/v1/merchant/authorize-transaction", requestBody)
-				w := httptest.NewRecorder()
-
-				api := webserver.Create(testConfig)
-				api.ServeHTTP(w, req)
+				output := simulatePost(testConfig, "/v1/merchant/authorize-transaction", requestBody)
 
 				Convey("Returns 200 status code", func() {
-					So(w.Code, ShouldEqual, 200)
+					So(output.Code, ShouldEqual, 200)
 				})
 
 				Convey("Adds transaction to Merchant's Authorized Transactions List", func() {
@@ -163,7 +143,7 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				})
 
 				Convey("Returns transaction ID in body", func() {
-					bodyAsString := w.Body.String()
+					bodyAsString := output.Body.String()
 					So(bodyAsString, ShouldContainSubstring, fmt.Sprintf(`"transaction_id":"%s"`, mockTransactionID))
 				})
 
@@ -176,20 +156,16 @@ func TestMerchantHandlersAPI(t *testing.T) {
 			})
 
 			Convey("When card has insufficient funds", func() {
-				transactionAmount := int32(5000)
-				requestBody := authRequestBody(mockCardNumber, mockMerchantID, transactionAmount)
-				req, _ := http.NewRequest("POST", "/v1/merchant/authorize-transaction", requestBody)
-				w := httptest.NewRecorder()
-
-				api := webserver.Create(testConfig)
-				api.ServeHTTP(w, req)
+				largeAmount := int32(5000)
+				requestBody := authRequestBody(mockCardNumber, mockMerchantID, largeAmount)
+				output := simulatePost(testConfig, "/v1/merchant/authorize-transaction", requestBody)
 
 				Convey("Returns 400", func() {
-					So(w.Code, ShouldEqual, 400)
+					So(output.Code, ShouldEqual, 400)
 				})
 
 				Convey("Returns appropriate error in body", func() {
-					bodyAsString := w.Body.String()
+					bodyAsString := output.Body.String()
 					So(bodyAsString, ShouldContainSubstring, `"error":"insufficient funds"`)
 				})
 			})
