@@ -6,7 +6,7 @@ import (
 	"github.com/asehra/bezier/storage"
 )
 
-func CreateMerchant(db storage.Storage, idGenerator generator.MerchantIDGenerator) (string, error) {
+func CreateMerchant(db storage.Storage, idGenerator generator.StringIDGenerator) (string, error) {
 	merchantID := idGenerator.Generate()
 	err := db.StoreMerchant(model.Merchant{
 		ID: merchantID,

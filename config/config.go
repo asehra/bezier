@@ -10,7 +10,7 @@ import (
 type Config struct {
 	DB                     storage.Storage
 	CardIDGenerator        generator.CardIDGenerator
-	MerchantIDGenerator    generator.MerchantIDGenerator
+	MerchantIDGenerator    generator.StringIDGenerator
 	TransactionIDGenerator generator.StringIDGenerator
 	StdOut                 io.Writer
 	StdErr                 io.Writer

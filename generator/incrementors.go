@@ -11,12 +11,12 @@ func (c *CardIDIncrementor) Generate() int64 {
 	return c.LastID
 }
 
-type MerchantIDIncrementor struct {
+type StringIDIncrementor struct {
 	Prefix string
 	LastID int
 }
 
-func (c *MerchantIDIncrementor) Generate() string {
-	c.LastID = c.LastID + 1
-	return c.Prefix + strconv.Itoa(c.LastID)
+func (i *StringIDIncrementor) Generate() string {
+	i.LastID = i.LastID + 1
+	return i.Prefix + strconv.Itoa(i.LastID)
 }
