@@ -1,79 +1,244 @@
-Curve Coding Test
-=================
+# Bezier
 
-The Problem
------------
+Welcome!
 
-In our simplified model of a prepaid card the card holds a balance in GBP and users can make
-transactions in GBP. 
+Bezier is a *simple* pre-paid card api that allows creating cards and merchants to simulate a transaction workflow. The details of the API can be seen in the sections. To keep things simple, following design choices have been made:
 
-### Epic 1: User can have a card with some balance
+* There is no authentication on the api
+* Multiple cards and merchants can be creating by hitting the endpoint
+* Transactions can be viewed on the merchant details endpoint
+* The data is stored in memory, however the API depends on a simple storage API. So integrating with any DB should be a matter of writing new adapters
 
-To be able to use the card the user must first load some money onto the
-card. This increases the available balance on the card. 
+Have fun buying coffees!
 
-#### Stories:
-1. A card can be created on the system
-1. A card can be topped up
+## Create card
+Create endpoint creates a new card with a different card number
+```
+$ curl -X GET https://bezier.herokuapp.com/v1/card/create
+```
+Produces:
+```json
+{
+    "card_number": 4921000000000001,
+    "error": null
+}
+```
 
-### Epic 2: User can make purchases on card at a Merchant
-When a user goes and makes a
-transaction using the card, the merchant (e.g your local independent coffee shop) sends the
-card an Authorization request to check if the user loaded enough money on the account to
-pay for their coffee.
-If the user has loaded enough, the Authorization request is approved and
-the amount the merchant requested is earmarked (or blocked). 
+## Get Card details
+Details can be viewed using card number in parameters:
+```
+$ curl -X GET 'https://bezier.herokuapp.com/v1/card/details?card_number=4921000000000001'
+```
+Fetches:
+```json
+{
+  "card_details": {
+    "card_number": 4921000000000001,
+    "available_balance": 3000,
+    "blocked_balance": 0,
+    "total_loaded": 3000
+  },
+  "error": ""
+}
+```
 
-#### Stories:
-1. Merchant can be registered on system
-1. Merchants can generate authorizations that block funds on card
-1. Authorizations can be declined on insufficient funds
+## Topup card
+Topup requires a POST:
+```
+$ curl -X POST \
+  https://bezier.herokuapp.com/v1/card/top-up \
+  -H 'content-type: application/json' \
+  -d '{"card_number": 4921000000000001,"amount": 3000}'
+```
 
-The merchant at a later point in the future can decide to Capture ​
-the transaction at which point we send the merchant the money. 
+## Create Merchant
+Merchants can be created similar to cards. Merchant ID returned will be their identifier to perform any transaction related operations
 
-### Epic 4: User can check account status
-At any point the user should be able to see how much he loaded onto the card, the
-current available balance, and the current amount that is blocked on there (waiting to be
-captured).
+```
+$ curl -X GET https://bezier.herokuapp.com/v1/merchant/create
+```
+```json
+{
+  "merchant_id": "M1001",
+  "error": null
+}
+```
 
-#### Stories
-1. Contributions to a card can be retreived
-1. Available balance on a card can be retreived
-1. Blocked balance on a card can be retreived
+## Authorize Transaction
+It is assumed the user hands merchant the card details (card_number) to make any payment
+An authorization request can be made as follows:
+```
+$ curl -X POST \
+  https://bezier.herokuapp.com/v1/merchant/authorize-transaction \
+  -H 'content-type: application/json' \
+  -d '{"card_number": 4921000000000001,"merchant_id":"M1001","amount": 300}'
+```
+This returns a transaction id that can be used for further actions:
+```json
+{"transaction_id":"TX10001","error":""}
+```
 
-### Epic 5: Merchant can capture (confirm) or reverse (decline) inbound transaction
-The merchant can decide to only capture part of the amount or capture the amount multiple
-times. 
+Merchant's transactions should reflect the authorizations, captures, refunds and reversals:
+```
+$ curl -X GET https://bezier.herokuapp.com/v1/merchant/transactions?merchant_id=M1001
+```
+```json
+{
+  "merchant_activity": {
+    "id": "M1001",
+    "transactions": [
+      {
+        "id": "TX10001",
+        "card_number": 4921000000000001,
+        "authorized": 300,
+        "captured": 0,
+        "reversed": 0,
+        "refunded": 0
+      }
+    ]
+  },
+  "error": ""
+}
+```
 
-In this model, the merchant can’t capture more than we initially authorized him to. 
+And card should reflect the blocked balance:
+```
+curl -X GET 'https://bezier.herokuapp.com/v1/card/details?card_number=4921000000000001'
+```
 
-The merchant can decide to reverse the whole or part of the initial Authorization at which point they
-can no longer capture the full amount (only the amount that is still authorized). 
-
-#### Stories:
-1. Merchent can retrieve authorized transactions
-1. Merchant can fully capture transaction
-1. Merchant can part capture transaction
-1. Merchant can fully reverse transaction
-1. Merchant can part reverse transaction whereby, capturable amount is also reduced.
-
-### Epic 6: Merchant can refund captured funds.
-The merchant can Refund ​the user after they capture the funds. They can’t refund the user more than they
-captured. 
-
-#### Stories
-1. Merchant can refund captured funds. 
-
-The user can then use the refunded amount to buy more coffee.
+```json
+{
+  "card_details": {
+    "card_number": 4921000000000001,
+    "available_balance": 2700,
+    "blocked_balance": 300,
+    "total_loaded": 3000
+  },
+  "error": ""
+}
+```
 
 
-*** FOR EXTRA POINTS ***
-Please deploy and allow us to interact with the card as a web service. We would like to be able
-to create new cards and load money, make transactions with it as described above, and see the
-available and blocked balance.
+## Capture transaction
+Capturing moves funds from authorized to captured field in the transaction removing from card's blocked funds
+```
+$ curl -X POST \
+  https://bezier.herokuapp.com/v1/merchant/capture-transaction \
+  -H 'content-type: application/json' \
+  -d '{"merchant_id":"M1001","transaction_id":"TX10001","amount": 100}'
+```
+Updates Merchant details to:
+```json
+{
+  "merchant_activity": {
+    "id": "M1001",
+    "transactions": [
+      {
+        "id": "TX10001",
+        "card_number": 4921000000000001,
+        "authorized": 200,
+        "captured": 100,
+        "reversed": 0,
+        "refunded": 0
+      }
+    ]
+  },
+  "error": ""
+}
+```
+And unblocks funds on card details:
+```json
+{
+  "card_details": {
+    "card_number": 4921000000000001,
+    "available_balance": 2700,
+    "blocked_balance": 200, // Blocked funds now withdrawn!
+    "total_loaded": 3000
+  },
+  "error": ""
+}
+```
 
-*** MORE EXTRA POINTS ***
-Create a transaction statement. We would like to know where we’re spending our money. This is
-your chance to show your creative side.
+## Reverse transaction
 
+Reverse moves funds from authorized to reversed field in the transaction and also unblocks the amount on the card
+```
+$ curl -X POST \
+  https://bezier.herokuapp.com/v1/merchant/reverse-transaction \
+  -H 'content-type: application/json' \
+  -d '{"merchant_id":"M1001","transaction_id":"TX10001","amount": 100}'
+```
+Updates Merchant details to:
+```json
+{
+  "merchant_activity": {
+    "id": "M1001",
+    "transactions": [
+      {
+        "id": "TX10001",
+        "card_number": 4921000000000001,
+        "authorized": 100,
+        "captured": 100,
+        "reversed": 100,
+        "refunded": 0
+      }
+    ]
+  },
+  "error": ""
+}
+```
+
+And moves funds back to available_balance to:
+```json
+{
+  "card_details": {
+    "card_number": 4921000000000001,
+    "available_balance": 2800,
+    "blocked_balance": 100, // Less money blocked!
+    "total_loaded": 3000
+  },
+  "error": ""
+}
+```
+
+## Refund captured 
+
+```
+$ curl -X POST \
+  https://bezier.herokuapp.com/v1/merchant/refund-transaction \
+  -H 'content-type: application/json' \
+  -d '{"merchant_id":"M1001","transaction_id":"TX10001","amount": 50}'
+```
+
+Moves funds to on transaction to refunded:
+```json
+{
+  "merchant_activity": {
+    "id": "M1001",
+    "transactions": [
+      {
+        "id": "TX10001",
+        "card_number": 4921000000000001,
+        "authorized": 100,
+        "captured": 50,
+        "reversed": 100,
+        "refunded": 50
+      }
+    ]
+  },
+  "error": ""
+}
+```
+
+And the card can be used for more coffees!:
+```json
+{
+  "card_details": {
+    "card_number": 4921000000000001,
+    "available_balance": 2850, // more coffees!
+    "blocked_balance": 100,
+    "total_loaded": 3000
+  },
+  "error": ""
+}
+```

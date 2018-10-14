@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Bezier</title>
+    <link type="text/css" rel="stylesheet" href="assets/css/bootstrap.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/bootstrap-responsive.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/pilcrow.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/hljs-github.min.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/style.css"/>
+  </head>
+<body>
+
+  <div class="container-fluid">
+    <div class="row-fluid">
+      <div class="span3"><ul class="nav nav-list">
+    <li class="sidebar-header-1"><a href="#bezier">Bezier</a></li>
+    <li class="sidebar-header-2"><a href="#create-card">Create card</a></li>
+    <li class="sidebar-header-2"><a href="#get-card-details">Get Card details</a></li>
+    <li class="sidebar-header-2"><a href="#topup-card">Topup card</a></li>
+    <li class="sidebar-header-2"><a href="#create-merchant">Create Merchant</a></li>
+    <li class="sidebar-header-2"><a href="#authorize-transaction">Authorize Transaction</a></li>
+    <li class="sidebar-header-2"><a href="#capture-transaction">Capture transaction</a></li>
+    <li class="sidebar-header-2"><a href="#reverse-transaction">Reverse transaction</a></li>
+    <li class="sidebar-header-2"><a href="#refund-captured">Refund captured</a></li>
+</ul>
+      </div>
+      <div class="span9 main"><h1 id="bezier"><a class="header-link" href="#bezier"></a>Bezier</h1>
+<p>Welcome!</p>
+<p>Bezier is a <em>simple</em> pre-paid card api that allows creating cards and merchants to simulate a transaction workflow. The details of the API can be seen in the sections. To keep things simple, following design choices have been made:</p>
+<ul class="list">
+<li>There is no authentication on the api</li>
+<li>Multiple cards and merchants can be creating by hitting the endpoint</li>
+<li>Transactions can be viewed on the merchant details endpoint</li>
+<li>The data is stored in memory, however the API depends on a simple storage API. So integrating with any DB should be a matter of writing new adapters</li>
+</ul>
+<p>Have fun buying coffees!</p>
+<h2 id="create-card"><a class="header-link" href="#create-card"></a>Create card</h2>
+<p>Create endpoint creates a new card with a different card number</p>
+<pre class="hljs"><code>$ curl -X GET https:<span class="hljs-regexp">//</span>bezier.herokuapp.com<span class="hljs-regexp">/v1/</span>card<span class="hljs-regexp">/create</span></code></pre><p>Produces:</p>
+<pre class="hljs"><code>{
+    <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+    <span class="hljs-attr">"error"</span>: <span class="hljs-literal">null</span>
+}</code></pre><h2 id="get-card-details"><a class="header-link" href="#get-card-details"></a>Get Card details</h2>
+<p>Details can be viewed using card number in parameters:</p>
+<pre class="hljs"><code><span class="hljs-variable">$ </span>curl -X GET <span class="hljs-string">'https://bezier.herokuapp.com/v1/card/details?card_number=4921000000000001'</span></code></pre><p>Fetches:</p>
+<pre class="hljs"><code>{
+  <span class="hljs-attr">"card_details"</span>: {
+    <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+    <span class="hljs-attr">"available_balance"</span>: <span class="hljs-number">3000</span>,
+    <span class="hljs-attr">"blocked_balance"</span>: <span class="hljs-number">0</span>,
+    <span class="hljs-attr">"total_loaded"</span>: <span class="hljs-number">3000</span>
+  },
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">""</span>
+}</code></pre><h2 id="topup-card"><a class="header-link" href="#topup-card"></a>Topup card</h2>
+<p>Topup requires a POST:</p>
+<pre class="hljs"><code>$ curl -X POST \
+  https:<span class="hljs-regexp">//</span>bezier.herokuapp.com<span class="hljs-regexp">/v1/</span>card<span class="hljs-regexp">/top-up \
+  -H 'content-type: application/</span>json<span class="hljs-string">' \
+  -d '</span>{<span class="hljs-string">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,<span class="hljs-string">"amount"</span>: <span class="hljs-number">3000</span>}<span class="hljs-string">'</span></code></pre><h2 id="create-merchant"><a class="header-link" href="#create-merchant"></a>Create Merchant</h2>
+<p>Merchants can be created similar to cards. Merchant ID returned will be their identifier to perform any transaction related operations</p>
+<pre class="hljs"><code>$ curl -X GET https:<span class="hljs-regexp">//</span>bezier.herokuapp.com<span class="hljs-regexp">/v1/m</span>erchant<span class="hljs-regexp">/create</span></code></pre><pre class="hljs"><code>{
+  <span class="hljs-attr">"merchant_id"</span>: <span class="hljs-string">"M1001"</span>,
+  <span class="hljs-attr">"error"</span>: <span class="hljs-literal">null</span>
+}</code></pre><h2 id="authorize-transaction"><a class="header-link" href="#authorize-transaction"></a>Authorize Transaction</h2>
+<p>It is assumed the user hands merchant the card details (card_number) to make any payment
+An authorization request can be made as follows:</p>
+<pre class="hljs"><code>$ curl -X POST \
+  https:<span class="hljs-regexp">//</span>bezier.herokuapp.com<span class="hljs-regexp">/v1/m</span>erchant<span class="hljs-regexp">/authorize-transaction \
+  -H 'content-type: application/</span>json<span class="hljs-string">' \
+  -d '</span>{<span class="hljs-string">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,<span class="hljs-string">"merchant_id"</span>:<span class="hljs-string">"M1001"</span>,<span class="hljs-string">"amount"</span>: <span class="hljs-number">300</span>}<span class="hljs-string">'</span></code></pre><p>This returns a transaction id that can be used for further actions:</p>
+<pre class="hljs"><code>{<span class="hljs-attr">"transaction_id"</span>:<span class="hljs-string">"TX10001"</span>,<span class="hljs-attr">"error"</span>:<span class="hljs-string">""</span>}</code></pre><p>Merchant&#39;s transactions should reflect the authorizations, captures, refunds and reversals:</p>
+<pre class="hljs"><code>$ curl -X GET https:<span class="hljs-regexp">//</span>bezier.herokuapp.com<span class="hljs-regexp">/v1/m</span>erchant<span class="hljs-regexp">/transactions?merchant_id=M1001</span></code></pre><pre class="hljs"><code>{
+  <span class="hljs-attr">"merchant_activity"</span>: {
+    <span class="hljs-attr">"id"</span>: <span class="hljs-string">"M1001"</span>,
+    <span class="hljs-attr">"transactions"</span>: [
+      {
+        <span class="hljs-attr">"id"</span>: <span class="hljs-string">"TX10001"</span>,
+        <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+        <span class="hljs-attr">"authorized"</span>: <span class="hljs-number">300</span>,
+        <span class="hljs-attr">"captured"</span>: <span class="hljs-number">0</span>,
+        <span class="hljs-attr">"reversed"</span>: <span class="hljs-number">0</span>,
+        <span class="hljs-attr">"refunded"</span>: <span class="hljs-number">0</span>
+      }
+    ]
+  },
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">""</span>
+}</code></pre><p>And card should reflect the blocked balance:</p>
+<pre class="hljs"><code><span class="hljs-attribute">curl</span> -X GET <span class="hljs-string">'https://bezier.herokuapp.com/v1/card/details?card_number=4921000000000001'</span></code></pre><pre class="hljs"><code>{
+  <span class="hljs-attr">"card_details"</span>: {
+    <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+    <span class="hljs-attr">"available_balance"</span>: <span class="hljs-number">2700</span>,
+    <span class="hljs-attr">"blocked_balance"</span>: <span class="hljs-number">300</span>,
+    <span class="hljs-attr">"total_loaded"</span>: <span class="hljs-number">3000</span>
+  },
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">""</span>
+}</code></pre><h2 id="capture-transaction"><a class="header-link" href="#capture-transaction"></a>Capture transaction</h2>
+<p>Capturing moves funds from authorized to captured field in the transaction removing from card&#39;s blocked funds</p>
+<pre class="hljs"><code>$ curl -X POST \
+  https:<span class="hljs-regexp">//</span>bezier.herokuapp.com<span class="hljs-regexp">/v1/m</span>erchant<span class="hljs-regexp">/capture-transaction \
+  -H 'content-type: application/</span>json<span class="hljs-string">' \
+  -d '</span>{<span class="hljs-string">"merchant_id"</span>:<span class="hljs-string">"M1001"</span>,<span class="hljs-string">"transaction_id"</span>:<span class="hljs-string">"TX10001"</span>,<span class="hljs-string">"amount"</span>: <span class="hljs-number">100</span>}<span class="hljs-string">'</span></code></pre><p>Updates Merchant details to:</p>
+<pre class="hljs"><code>{
+  <span class="hljs-attr">"merchant_activity"</span>: {
+    <span class="hljs-attr">"id"</span>: <span class="hljs-string">"M1001"</span>,
+    <span class="hljs-attr">"transactions"</span>: [
+      {
+        <span class="hljs-attr">"id"</span>: <span class="hljs-string">"TX10001"</span>,
+        <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+        <span class="hljs-attr">"authorized"</span>: <span class="hljs-number">200</span>,
+        <span class="hljs-attr">"captured"</span>: <span class="hljs-number">100</span>,
+        <span class="hljs-attr">"reversed"</span>: <span class="hljs-number">0</span>,
+        <span class="hljs-attr">"refunded"</span>: <span class="hljs-number">0</span>
+      }
+    ]
+  },
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">""</span>
+}</code></pre><p>And unblocks funds on card details:</p>
+<pre class="hljs"><code>{
+  <span class="hljs-attr">"card_details"</span>: {
+    <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+    <span class="hljs-attr">"available_balance"</span>: <span class="hljs-number">2700</span>,
+    <span class="hljs-attr">"blocked_balance"</span>: <span class="hljs-number">200</span>, // Blocked funds now withdrawn!
+    <span class="hljs-attr">"total_loaded"</span>: <span class="hljs-number">3000</span>
+  },
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">""</span>
+}</code></pre><h2 id="reverse-transaction"><a class="header-link" href="#reverse-transaction"></a>Reverse transaction</h2>
+<p>Reverse moves funds from authorized to reversed field in the transaction and also unblocks the amount on the card</p>
+<pre class="hljs"><code>$ curl -X POST \
+  https:<span class="hljs-regexp">//</span>bezier.herokuapp.com<span class="hljs-regexp">/v1/m</span>erchant<span class="hljs-regexp">/reverse-transaction \
+  -H 'content-type: application/</span>json<span class="hljs-string">' \
+  -d '</span>{<span class="hljs-string">"merchant_id"</span>:<span class="hljs-string">"M1001"</span>,<span class="hljs-string">"transaction_id"</span>:<span class="hljs-string">"TX10001"</span>,<span class="hljs-string">"amount"</span>: <span class="hljs-number">100</span>}<span class="hljs-string">'</span></code></pre><p>Updates Merchant details to:</p>
+<pre class="hljs"><code>{
+  <span class="hljs-attr">"merchant_activity"</span>: {
+    <span class="hljs-attr">"id"</span>: <span class="hljs-string">"M1001"</span>,
+    <span class="hljs-attr">"transactions"</span>: [
+      {
+        <span class="hljs-attr">"id"</span>: <span class="hljs-string">"TX10001"</span>,
+        <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+        <span class="hljs-attr">"authorized"</span>: <span class="hljs-number">100</span>,
+        <span class="hljs-attr">"captured"</span>: <span class="hljs-number">100</span>,
+        <span class="hljs-attr">"reversed"</span>: <span class="hljs-number">100</span>,
+        <span class="hljs-attr">"refunded"</span>: <span class="hljs-number">0</span>
+      }
+    ]
+  },
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">""</span>
+}</code></pre><p>And moves funds back to available_balance to:</p>
+<pre class="hljs"><code>{
+  <span class="hljs-attr">"card_details"</span>: {
+    <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+    <span class="hljs-attr">"available_balance"</span>: <span class="hljs-number">2800</span>,
+    <span class="hljs-attr">"blocked_balance"</span>: <span class="hljs-number">100</span>, // Less money blocked!
+    <span class="hljs-attr">"total_loaded"</span>: <span class="hljs-number">3000</span>
+  },
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">""</span>
+}</code></pre><h2 id="refund-captured"><a class="header-link" href="#refund-captured"></a>Refund captured</h2>
+<pre class="hljs"><code>$ curl -X POST \
+  https:<span class="hljs-regexp">//</span>bezier.herokuapp.com<span class="hljs-regexp">/v1/m</span>erchant<span class="hljs-regexp">/refund-transaction \
+  -H 'content-type: application/</span>json<span class="hljs-string">' \
+  -d '</span>{<span class="hljs-string">"merchant_id"</span>:<span class="hljs-string">"M1001"</span>,<span class="hljs-string">"transaction_id"</span>:<span class="hljs-string">"TX10001"</span>,<span class="hljs-string">"amount"</span>: <span class="hljs-number">50</span>}<span class="hljs-string">'</span></code></pre><p>Moves funds to on transaction to refunded:</p>
+<pre class="hljs"><code>{
+  <span class="hljs-attr">"merchant_activity"</span>: {
+    <span class="hljs-attr">"id"</span>: <span class="hljs-string">"M1001"</span>,
+    <span class="hljs-attr">"transactions"</span>: [
+      {
+        <span class="hljs-attr">"id"</span>: <span class="hljs-string">"TX10001"</span>,
+        <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+        <span class="hljs-attr">"authorized"</span>: <span class="hljs-number">100</span>,
+        <span class="hljs-attr">"captured"</span>: <span class="hljs-number">50</span>,
+        <span class="hljs-attr">"reversed"</span>: <span class="hljs-number">100</span>,
+        <span class="hljs-attr">"refunded"</span>: <span class="hljs-number">50</span>
+      }
+    ]
+  },
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">""</span>
+}</code></pre><p>And the card can be used for more coffees!:</p>
+<pre class="hljs"><code>{
+  <span class="hljs-attr">"card_details"</span>: {
+    <span class="hljs-attr">"card_number"</span>: <span class="hljs-number">4921000000000001</span>,
+    <span class="hljs-attr">"available_balance"</span>: <span class="hljs-number">2850</span>, // more coffees!
+    <span class="hljs-attr">"blocked_balance"</span>: <span class="hljs-number">100</span>,
+    <span class="hljs-attr">"total_loaded"</span>: <span class="hljs-number">3000</span>
+  },
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">""</span>
+}</code></pre>      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script type="text/javascript" src="assets/js/bootstrap.min.js"></script>
+</body>
+</html>
