@@ -6,4 +6,5 @@ type Transaction struct {
 	Authorized int    `json:"authorized"`
 	Captured   int    `json:"captured"`
 	Reversed   int    `json:"reversed"`
+	Refunded   int    `json:"refunded"`
 }

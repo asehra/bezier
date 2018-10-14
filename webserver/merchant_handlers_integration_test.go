@@ -323,6 +323,85 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				})
 			})
 		})
+
+		Convey("POST /v1/merchant/refund-transaction", func() {
+			mockTransactionID := "TX88888"
+			authorizedTransaction := model.Transaction{
+				ID:         mockTransactionID,
+				CardNumber: mockCardNumber,
+				Captured:   100,
+				Refunded:   0,
+			}
+			db.StoreCard(model.Card{
+				Number:           mockCardNumber,
+				AvailableBalance: 200,
+				BlockedBalance:   100,
+			})
+			db.StoreMerchant(model.Merchant{
+				ID:           mockMerchantID,
+				Transactions: []model.Transaction{authorizedTransaction},
+			})
+
+			Convey("When refund is possible", func() {
+				requestBody := transactionActionBody(mockMerchantID, mockTransactionID, 70)
+				output := simulatePost(testConfig, "/v1/merchant/refund-transaction", requestBody)
+				Convey("Returns 200", func() {
+					So(output.Code, ShouldEqual, 200)
+				})
+
+				Convey("Moves funds from Captured to Refunded within transactions", func() {
+					merchant, _ := db.GetMerchant(mockMerchantID)
+					So(merchant.Transactions, ShouldResemble, []model.Transaction{
+						model.Transaction{
+							ID:         mockTransactionID,
+							CardNumber: mockCardNumber,
+							Captured:   30,
+							Refunded:   70,
+						}})
+				})
+
+				Convey("Refunded funds are credited to the Card", func() {
+					card, _ := db.GetCard(mockCardNumber)
+					So(card.AvailableBalance, ShouldEqual, 270)
+				})
+			})
+
+			Convey("When refund is not possible", func() {
+				requestBody := transactionActionBody(mockMerchantID, mockTransactionID, 170)
+				output := simulatePost(testConfig, "/v1/merchant/refund-transaction", requestBody)
+				Convey("Returns 400", func() {
+					So(output.Code, ShouldEqual, 400)
+				})
+
+				Convey("Returns error message", func() {
+					bodyAsString := output.Body.String()
+					So(bodyAsString, ShouldEqual, `{"error":"can not over-refund"}`)
+				})
+
+				Convey("Leaves DB unaffected", func() {
+					merchant, _ := db.GetMerchant(mockMerchantID)
+					So(merchant.Transactions, ShouldResemble, []model.Transaction{
+						model.Transaction{
+							ID:         mockTransactionID,
+							CardNumber: mockCardNumber,
+							Captured:   100,
+							Refunded:   0,
+						}})
+				})
+			})
+
+			Convey("When request is badly formed", func() {
+				output := simulatePost(testConfig, "/v1/merchant/refund-transaction", strings.NewReader("bad data"))
+				Convey("Returns 400", func() {
+					So(output.Code, ShouldEqual, 400)
+				})
+
+				Convey("Returns bad JSON response", func() {
+					bodyAsString := output.Body.String()
+					So(bodyAsString, ShouldEqual, `{"error":"bad JSON format"}`)
+				})
+			})
+		})
 	})
 }
 

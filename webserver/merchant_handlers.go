@@ -112,3 +112,19 @@ func reverseTransactionHandler(config config.Config) func(*gin.Context) {
 		c.JSON(http.StatusOK, "")
 	}
 }
+
+func refundTransactionHandler(config config.Config) func(*gin.Context) {
+	return func(c *gin.Context) {
+		var params TransactionRequest
+		if err := c.ShouldBindJSON(&params); err != nil {
+			c.String(http.StatusBadRequest, `{"error":"bad JSON format"}`)
+			return
+		}
+		err := service.RefundTransaction(config.DB, params.MerchantID, params.TransactionID, params.Amount)
+		if err != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf(`{"error":"%s"}`, err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, "")
+	}
+}

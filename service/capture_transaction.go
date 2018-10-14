@@ -19,7 +19,7 @@ func CaptureTransaction(db storage.Storage, merchantID string, transactionID str
 	if int(amount) > merchant.Transactions[idx].Authorized {
 		return errors.New("can not over-capture")
 	}
-	merchant.Transactions[idx].Authorized = merchant.Transactions[idx].Authorized - int(amount) // TODO handle over-capture
+	merchant.Transactions[idx].Authorized = merchant.Transactions[idx].Authorized - int(amount)
 	merchant.Transactions[idx].Captured = merchant.Transactions[idx].Captured + int(amount)
 	return db.StoreMerchant(merchant)
 }
