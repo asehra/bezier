@@ -51,7 +51,9 @@ func TestCardHandlersAPI(t *testing.T) {
 				var response webserver.CreateCardResponse
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				So(err, ShouldBeNil)
-				So(db.CardStore[response.CardNumber].Number, ShouldEqual, mockCardNumber)
+				card, err := db.GetCard(response.CardNumber)
+				So(err, ShouldBeNil)
+				So(card.Number, ShouldEqual, mockCardNumber)
 			})
 		})
 

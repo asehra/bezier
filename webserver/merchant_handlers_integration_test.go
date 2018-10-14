@@ -51,7 +51,9 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				var response webserver.CreateMerchantResponse
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				So(err, ShouldBeNil)
-				So(db.MerchantStore[response.MerchantID].ID, ShouldEqual, mockMerchantID)
+				merchant, err := db.GetMerchant(response.MerchantID)
+				So(err, ShouldBeNil)
+				So(merchant.ID, ShouldEqual, mockMerchantID)
 			})
 		})
 
