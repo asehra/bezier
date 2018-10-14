@@ -19,6 +19,7 @@ func Create(config config.Config) *gin.Engine {
 		v1.GET("/merchant/create", createMerchantHandler(config))
 		v1.POST("/merchant/authorize-transaction", authorizeTransactionHandler(config))
 		v1.GET("/merchant/transactions", merchantTransactionsHandler(config))
+		v1.POST("/merchant/capture-transaction", captureTransactionHandler(config))
 	}
 	return r
 }

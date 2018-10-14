@@ -27,7 +27,7 @@ func TestCreateMerchant(t *testing.T) {
 
 				Convey("Stores the new merchant on the storage with a generated ID", func() {
 					So(db.StoreMerchantCall.Receives.Merchant.ID, ShouldEqual, expectedMerchantID)
-					So(db.StoreMerchantCall.Receives.Merchant.AuthorizedTransactions, ShouldResemble, []model.Transaction{})
+					So(db.StoreMerchantCall.Receives.Merchant.Transactions, ShouldResemble, []model.Transaction{})
 				})
 			})
 

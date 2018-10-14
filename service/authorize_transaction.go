@@ -21,13 +21,13 @@ func AuthorizeTransaction(db storage.Storage, cardNumber int64, merchantID strin
 	transaction := model.Transaction{
 		ID:         idGenerator.Generate(),
 		CardNumber: cardNumber,
-		Amount:     amount,
+		Authorized: amount,
 	}
 	merchant, err := db.GetMerchant(merchantID)
 	if err != nil {
 		return "", err
 	}
-	merchant.AuthorizedTransactions = append(merchant.AuthorizedTransactions, transaction)
+	merchant.Transactions = append(merchant.Transactions, transaction)
 	{ // NOTE This should be transactional on a real system
 		db.StoreCard(card)         //TODO: handle error
 		db.StoreMerchant(merchant) //TODO: handle herror

@@ -55,11 +55,11 @@ func TestMerchantHandlersAPI(t *testing.T) {
 		Convey("GET /v1/merchant/transactions", func() {
 			merchant := model.Merchant{
 				ID: mockMerchantID,
-				AuthorizedTransactions: []model.Transaction{
+				Transactions: []model.Transaction{
 					{
 						ID:         "TX101",
 						CardNumber: mockCardNumber,
-						Amount:     100,
+						Authorized: 100,
 					},
 				},
 			}
@@ -116,7 +116,7 @@ func TestMerchantHandlersAPI(t *testing.T) {
 			})
 		})
 
-		Convey("POST /v1/merchant/transaction-authorization-request", func() {
+		Convey("POST /v1/merchant/authorize-transaction", func() {
 			db.StoreMerchant(model.Merchant{mockMerchantID, []model.Transaction{}})
 			db.StoreCard(model.Card{
 				Number:           mockCardNumber,
@@ -139,7 +139,12 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				Convey("Adds transaction to Merchant's Authorized Transactions List", func() {
 					merchant, err := db.GetMerchant(mockMerchantID)
 					So(err, ShouldBeNil)
-					So(merchant.AuthorizedTransactions, ShouldResemble, []model.Transaction{{mockTransactionID, mockCardNumber, transactionAmount}})
+					So(merchant.Transactions, ShouldResemble, []model.Transaction{{
+						ID:         mockTransactionID,
+						CardNumber: mockCardNumber,
+						Authorized: transactionAmount,
+						Captured:   0,
+					}})
 				})
 
 				Convey("Returns transaction ID in body", func() {
@@ -169,6 +174,54 @@ func TestMerchantHandlersAPI(t *testing.T) {
 					So(bodyAsString, ShouldContainSubstring, `"error":"insufficient funds"`)
 				})
 			})
+
+			Convey("When request is badly formed", func() {
+				// TODO Return bad data resposne
+			})
+		})
+
+		Convey("POST /v1/merchant/capture-transaction", func() {
+			mockTransactionID := "TX88888"
+			authorizedTransaction := model.Transaction{
+				ID:         mockTransactionID,
+				CardNumber: mockCardNumber,
+				Authorized: 100,
+			}
+			db.StoreMerchant(model.Merchant{
+				ID:           mockMerchantID,
+				Transactions: []model.Transaction{authorizedTransaction},
+			})
+
+			Convey("Capture partial transaction", func() {
+				requestBody := captureRequestBody(mockMerchantID, mockTransactionID, 70)
+				output := simulatePost(testConfig, "/v1/merchant/capture-transaction", requestBody)
+				Convey("Returns 200", func() {
+					So(output.Code, ShouldEqual, 200)
+				})
+
+				Convey("Moves funds from Authorized Transactions to captured transactions", func() {
+					merchant, _ := db.GetMerchant(mockMerchantID)
+					So(merchant.Transactions, ShouldResemble, []model.Transaction{
+						model.Transaction{
+							ID:         mockTransactionID,
+							CardNumber: mockCardNumber,
+							Authorized: 30,
+							Captured:   70,
+						}})
+				})
+			})
+
+			Convey("When request is badly formed", func() {
+				output := simulatePost(testConfig, "/v1/merchant/capture-transaction", strings.NewReader("bad data"))
+				Convey("Returns 400", func() {
+					So(output.Code, ShouldEqual, 400)
+				})
+
+				Convey("Returns bad JSON response", func() {
+					bodyAsString := output.Body.String()
+					So(bodyAsString, ShouldEqual, `{"error":"bad JSON format"}`)
+				})
+			})
 		})
 	})
 }
@@ -182,6 +235,18 @@ func authRequestBody(cardNumber int64, merchantID string, transactionAmount int3
 		}`,
 		cardNumber,
 		merchantID,
+		transactionAmount,
+	))
+}
+func captureRequestBody(merchantID string, tranasactionID string, transactionAmount int32) io.Reader {
+	return strings.NewReader(fmt.Sprintf(
+		`{
+			"merchant_id": "%s",
+			"transaction_id": "%s",
+			"amount": %d
+		}`,
+		merchantID,
+		tranasactionID,
 		transactionAmount,
 	))
 }

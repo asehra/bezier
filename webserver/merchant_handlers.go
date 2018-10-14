@@ -73,3 +73,24 @@ func merchantTransactionsHandler(config config.Config) func(*gin.Context) {
 		c.JSON(http.StatusOK, MerchantTransactionsResponse{merchant, ""})
 	}
 }
+
+type CaptureTransactionRequest struct {
+	MerchantID    string `json:"merchant_id"`
+	TransactionID string `json:"transaction_id"`
+	Amount        int32  `json:"amount"`
+}
+
+func captureTransactionHandler(config config.Config) func(*gin.Context) {
+	return func(c *gin.Context) {
+		var params CaptureTransactionRequest
+		if err := c.ShouldBindJSON(&params); err != nil {
+			c.String(http.StatusBadRequest, `{"error":"bad JSON format"}`)
+			return
+		}
+		err := service.CaptureTransaction(config.DB, params.MerchantID, params.TransactionID, params.Amount)
+		if err != nil {
+			panic("unhandled err")
+		}
+		c.JSON(http.StatusOK, "")
+	}
+}
