@@ -29,8 +29,12 @@ func AuthorizeTransaction(db storage.Storage, cardNumber int64, merchantID strin
 	}
 	merchant.Transactions = append(merchant.Transactions, transaction)
 	{ // NOTE This should be transactional on a real system
-		db.StoreCard(card)         //TODO: handle error
-		db.StoreMerchant(merchant) //TODO: handle herror
+		if err = db.StoreCard(card); err != nil {
+			return "", err
+		}
+		if err = db.StoreMerchant(merchant); err != nil {
+			return "", err
+		}
 	}
 	return transaction.ID, nil
 }

@@ -21,11 +21,12 @@ func TestAuthorizeTransaction(t *testing.T) {
 		amount := 50
 		idGenerator := &mock.StringIDGenerator{MockID: mockTransactionID}
 		db := &mock.Storage{}
+		cardWithSufficientFunds := model.Card{
+			Number:           cardNumber,
+			AvailableBalance: 1000,
+		}
 		Convey("On a valid card", func() {
-			db.GetCardCall.Returns.Card = model.Card{
-				Number:           cardNumber,
-				AvailableBalance: 1000,
-			}
+			db.GetCardCall.Returns.Card = cardWithSufficientFunds
 
 			Convey("With Sufficient funds", func() {
 				transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, uint(amount), idGenerator)
@@ -55,16 +56,31 @@ func TestAuthorizeTransaction(t *testing.T) {
 		})
 
 		Convey("With an invalid merchant ID", func() {
-			db.GetCardCall.Returns.Card = model.Card{
-				Number:           cardNumber,
-				AvailableBalance: 1000,
-			}
+			db.GetCardCall.Returns.Card = cardWithSufficientFunds
 			expectedError := errors.New("Bad merchant")
 			db.GetMerchantCall.Returns.Error = expectedError
 			transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, uint(amount), idGenerator)
 			Convey("Transaction is declined with error", func() {
 				So(transactionID, ShouldEqual, "")
 				So(err, ShouldResemble, expectedError)
+			})
+		})
+
+		Convey("And storing merchant raises error", func() {
+			db.GetCardCall.Returns.Card = cardWithSufficientFunds
+			db.StoreMerchantCall.Returns.Error = errors.New("something went wrong")
+			_, err := service.AuthorizeTransaction(db, cardNumber, merchantID, uint(amount), idGenerator)
+			Convey("Error is raised", func() {
+				So(err, ShouldResemble, errors.New("something went wrong"))
+			})
+		})
+
+		Convey("And storing card raises error", func() {
+			db.GetCardCall.Returns.Card = cardWithSufficientFunds
+			db.StoreCardCall.Returns.Error = errors.New("something went wrong")
+			_, err := service.AuthorizeTransaction(db, cardNumber, merchantID, uint(amount), idGenerator)
+			Convey("Error is raised", func() {
+				So(err, ShouldResemble, errors.New("something went wrong"))
 			})
 		})
 	})
