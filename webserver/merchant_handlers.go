@@ -75,7 +75,7 @@ func merchantTransactionsHandler(config config.Config) func(*gin.Context) {
 	}
 }
 
-type CaptureTransactionRequest struct {
+type TransactionRequest struct {
 	MerchantID    string `json:"merchant_id"`
 	TransactionID string `json:"transaction_id"`
 	Amount        uint   `json:"amount"`
@@ -83,12 +83,28 @@ type CaptureTransactionRequest struct {
 
 func captureTransactionHandler(config config.Config) func(*gin.Context) {
 	return func(c *gin.Context) {
-		var params CaptureTransactionRequest
+		var params TransactionRequest
 		if err := c.ShouldBindJSON(&params); err != nil {
 			c.String(http.StatusBadRequest, `{"error":"bad JSON format"}`)
 			return
 		}
 		err := service.CaptureTransaction(config.DB, params.MerchantID, params.TransactionID, params.Amount)
+		if err != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf(`{"error":"%s"}`, err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, "")
+	}
+}
+
+func reverseTransactionHandler(config config.Config) func(*gin.Context) {
+	return func(c *gin.Context) {
+		var params TransactionRequest
+		if err := c.ShouldBindJSON(&params); err != nil {
+			c.String(http.StatusBadRequest, `{"error":"bad JSON format"}`)
+			return
+		}
+		err := service.ReverseTransaction(config.DB, params.MerchantID, params.TransactionID, params.Amount)
 		if err != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf(`{"error":"%s"}`, err.Error()))
 			return

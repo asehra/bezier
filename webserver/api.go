@@ -20,6 +20,7 @@ func Create(config config.Config) *gin.Engine {
 		v1.POST("/merchant/authorize-transaction", authorizeTransactionHandler(config))
 		v1.GET("/merchant/transactions", merchantTransactionsHandler(config))
 		v1.POST("/merchant/capture-transaction", captureTransactionHandler(config))
+		v1.POST("/merchant/reverse-transaction", reverseTransactionHandler(config))
 	}
 	return r
 }

@@ -201,7 +201,26 @@ func TestMerchantHandlersAPI(t *testing.T) {
 			})
 
 			Convey("When capture is possible", func() {
-				requestBody := captureRequestBody(mockMerchantID, mockTransactionID, 170)
+				requestBody := transactionActionBody(mockMerchantID, mockTransactionID, 70)
+				output := simulatePost(testConfig, "/v1/merchant/capture-transaction", requestBody)
+				Convey("Returns 200", func() {
+					So(output.Code, ShouldEqual, 200)
+				})
+
+				Convey("Moves funds from Authorized Transactions to captured transactions", func() {
+					merchant, _ := db.GetMerchant(mockMerchantID)
+					So(merchant.Transactions, ShouldResemble, []model.Transaction{
+						model.Transaction{
+							ID:         mockTransactionID,
+							CardNumber: mockCardNumber,
+							Authorized: 30,
+							Captured:   70,
+						}})
+				})
+			})
+
+			Convey("When capture is not possible", func() {
+				requestBody := transactionActionBody(mockMerchantID, mockTransactionID, 170)
 				output := simulatePost(testConfig, "/v1/merchant/capture-transaction", requestBody)
 				Convey("Returns 400", func() {
 					So(output.Code, ShouldEqual, 400)
@@ -224,25 +243,6 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				})
 			})
 
-			Convey("When capture is not possible", func() {
-				requestBody := captureRequestBody(mockMerchantID, mockTransactionID, 70)
-				output := simulatePost(testConfig, "/v1/merchant/capture-transaction", requestBody)
-				Convey("Returns 200", func() {
-					So(output.Code, ShouldEqual, 200)
-				})
-
-				Convey("Moves funds from Authorized Transactions to captured transactions", func() {
-					merchant, _ := db.GetMerchant(mockMerchantID)
-					So(merchant.Transactions, ShouldResemble, []model.Transaction{
-						model.Transaction{
-							ID:         mockTransactionID,
-							CardNumber: mockCardNumber,
-							Authorized: 30,
-							Captured:   70,
-						}})
-				})
-			})
-
 			Convey("When request is badly formed", func() {
 				output := simulatePost(testConfig, "/v1/merchant/capture-transaction", strings.NewReader("bad data"))
 				Convey("Returns 400", func() {
@@ -256,73 +256,73 @@ func TestMerchantHandlersAPI(t *testing.T) {
 			})
 		})
 
-		// Convey("POST /v1/merchant/reverse-transaction", func() {
-		// 	mockTransactionID := "TX88888"
-		// 	authorizedTransaction := model.Transaction{
-		// 		ID:         mockTransactionID,
-		// 		CardNumber: mockCardNumber,
-		// 		Authorized: 100,
-		// 	}
-		// 	db.StoreMerchant(model.Merchant{
-		// 		ID:           mockMerchantID,
-		// 		Transactions: []model.Transaction{authorizedTransaction},
-		// 	})
+		Convey("POST /v1/merchant/reverse-transaction", func() {
+			mockTransactionID := "TX88888"
+			authorizedTransaction := model.Transaction{
+				ID:         mockTransactionID,
+				CardNumber: mockCardNumber,
+				Authorized: 100,
+			}
+			db.StoreMerchant(model.Merchant{
+				ID:           mockMerchantID,
+				Transactions: []model.Transaction{authorizedTransaction},
+			})
 
-		// 	Convey("When reverse is possible", func() {
-		// 		requestBody := reverseRequestBody(mockMerchantID, mockTransactionID, 170)
-		// 		output := simulatePost(testConfig, "/v1/merchant/reverse-transaction", requestBody)
-		// 		Convey("Returns 400", func() {
-		// 			So(output.Code, ShouldEqual, 400)
-		// 		})
+			Convey("When reverse is possible", func() {
+				requestBody := transactionActionBody(mockMerchantID, mockTransactionID, 70)
+				output := simulatePost(testConfig, "/v1/merchant/reverse-transaction", requestBody)
+				Convey("Returns 200", func() {
+					So(output.Code, ShouldEqual, 200)
+				})
 
-		// 		Convey("Returns error message", func() {
-		// 			bodyAsString := output.Body.String()
-		// 			So(bodyAsString, ShouldEqual, `{"error":"can not over-reverse"}`)
-		// 		})
+				Convey("Moves funds from Authorized Transactions to reversed transactions", func() {
+					merchant, _ := db.GetMerchant(mockMerchantID)
+					So(merchant.Transactions, ShouldResemble, []model.Transaction{
+						model.Transaction{
+							ID:         mockTransactionID,
+							CardNumber: mockCardNumber,
+							Authorized: 30,
+							Reversed:   70,
+						}})
+				})
+			})
 
-		// 		Convey("Leaves DB unaffected", func() {
-		// 			merchant, _ := db.GetMerchant(mockMerchantID)
-		// 			So(merchant.Transactions, ShouldResemble, []model.Transaction{
-		// 				model.Transaction{
-		// 					ID:         mockTransactionID,
-		// 					CardNumber: mockCardNumber,
-		// 					Authorized: 100,
-		// 					Reversed:   0,
-		// 				}})
-		// 		})
-		// 	})
+			Convey("When reverse is not possible", func() {
+				requestBody := transactionActionBody(mockMerchantID, mockTransactionID, 170)
+				output := simulatePost(testConfig, "/v1/merchant/reverse-transaction", requestBody)
+				Convey("Returns 400", func() {
+					So(output.Code, ShouldEqual, 400)
+				})
 
-		// 	Convey("When reverse is not possible", func() {
-		// 		requestBody := reverseRequestBody(mockMerchantID, mockTransactionID, 70)
-		// 		output := simulatePost(testConfig, "/v1/merchant/reverse-transaction", requestBody)
-		// 		Convey("Returns 200", func() {
-		// 			So(output.Code, ShouldEqual, 200)
-		// 		})
+				Convey("Returns error message", func() {
+					bodyAsString := output.Body.String()
+					So(bodyAsString, ShouldEqual, `{"error":"can not over-reverse"}`)
+				})
 
-		// 		Convey("Moves funds from Authorized Transactions to reversed transactions", func() {
-		// 			merchant, _ := db.GetMerchant(mockMerchantID)
-		// 			So(merchant.Transactions, ShouldResemble, []model.Transaction{
-		// 				model.Transaction{
-		// 					ID:         mockTransactionID,
-		// 					CardNumber: mockCardNumber,
-		// 					Authorized: 30,
-		// 					Reversed:   70,
-		// 				}})
-		// 		})
-		// 	})
+				Convey("Leaves DB unaffected", func() {
+					merchant, _ := db.GetMerchant(mockMerchantID)
+					So(merchant.Transactions, ShouldResemble, []model.Transaction{
+						model.Transaction{
+							ID:         mockTransactionID,
+							CardNumber: mockCardNumber,
+							Authorized: 100,
+							Reversed:   0,
+						}})
+				})
+			})
 
-		// 	Convey("When request is badly formed", func() {
-		// 		output := simulatePost(testConfig, "/v1/merchant/reverse-transaction", strings.NewReader("bad data"))
-		// 		Convey("Returns 400", func() {
-		// 			So(output.Code, ShouldEqual, 400)
-		// 		})
+			Convey("When request is badly formed", func() {
+				output := simulatePost(testConfig, "/v1/merchant/reverse-transaction", strings.NewReader("bad data"))
+				Convey("Returns 400", func() {
+					So(output.Code, ShouldEqual, 400)
+				})
 
-		// 		Convey("Returns bad JSON response", func() {
-		// 			bodyAsString := output.Body.String()
-		// 			So(bodyAsString, ShouldEqual, `{"error":"bad JSON format"}`)
-		// 		})
-		// 	})
-		// })
+				Convey("Returns bad JSON response", func() {
+					bodyAsString := output.Body.String()
+					So(bodyAsString, ShouldEqual, `{"error":"bad JSON format"}`)
+				})
+			})
+		})
 	})
 }
 
@@ -338,7 +338,8 @@ func authRequestBody(cardNumber int64, merchantID string, transactionAmount int)
 		transactionAmount,
 	))
 }
-func captureRequestBody(merchantID string, tranasactionID string, transactionAmount int) io.Reader {
+
+func transactionActionBody(merchantID string, tranasactionID string, transactionAmount int) io.Reader {
 	return strings.NewReader(fmt.Sprintf(
 		`{
 			"merchant_id": "%s",
