@@ -72,7 +72,7 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				transactionAmount := int32(50)
 
 				requestBody := authRequestBody(mockCardNumber, mockMerchantID, transactionAmount)
-				req, _ := http.NewRequest("GET", "/v1/merchant/authorize-transaction", requestBody)
+				req, _ := http.NewRequest("POST", "/v1/merchant/authorize-transaction", requestBody)
 				w := httptest.NewRecorder()
 
 				api := webserver.Create(testConfig)
@@ -104,7 +104,7 @@ func TestMerchantHandlersAPI(t *testing.T) {
 			Convey("When card has insufficient funds", func() {
 				transactionAmount := int32(5000)
 				requestBody := authRequestBody(mockCardNumber, mockMerchantID, transactionAmount)
-				req, _ := http.NewRequest("GET", "/v1/merchant/authorize-transaction", requestBody)
+				req, _ := http.NewRequest("POST", "/v1/merchant/authorize-transaction", requestBody)
 				w := httptest.NewRecorder()
 
 				api := webserver.Create(testConfig)
