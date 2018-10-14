@@ -8,20 +8,20 @@ import (
 	"github.com/asehra/bezier/storage"
 )
 
-func AuthorizeTransaction(db storage.Storage, cardNumber int64, merchantID string, amount int, idGenerator generator.StringIDGenerator) (string, error) {
+func AuthorizeTransaction(db storage.Storage, cardNumber int64, merchantID string, amount uint, idGenerator generator.StringIDGenerator) (string, error) {
 	card, err := db.GetCard(cardNumber)
 	if err != nil {
 		return "", err
 	}
-	if amount > card.AvailableBalance {
+	if int(amount) > card.AvailableBalance {
 		return "", errors.New("insufficient funds")
 	}
-	card.AvailableBalance = card.AvailableBalance - amount
-	card.BlockedBalance = card.BlockedBalance + amount
+	card.AvailableBalance = card.AvailableBalance - int(amount)
+	card.BlockedBalance = card.BlockedBalance + int(amount)
 	transaction := model.Transaction{
 		ID:         idGenerator.Generate(),
 		CardNumber: cardNumber,
-		Authorized: amount,
+		Authorized: int(amount),
 	}
 	merchant, err := db.GetMerchant(merchantID)
 	if err != nil {

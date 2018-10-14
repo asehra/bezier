@@ -7,7 +7,7 @@ import (
 	"github.com/asehra/bezier/storage"
 )
 
-func CaptureTransaction(db storage.Storage, merchantID string, transactionID string, amount int) error {
+func CaptureTransaction(db storage.Storage, merchantID string, transactionID string, amount uint) error {
 	merchant, err := db.GetMerchant(merchantID)
 	if err != nil {
 		return err
@@ -16,11 +16,11 @@ func CaptureTransaction(db storage.Storage, merchantID string, transactionID str
 	if idx == -1 {
 		return errors.New("transaction not found")
 	}
-	if amount > merchant.Transactions[idx].Authorized {
+	if int(amount) > merchant.Transactions[idx].Authorized {
 		return errors.New("can not over-capture")
 	}
-	merchant.Transactions[idx].Authorized = merchant.Transactions[idx].Authorized - amount // TODO handle over-capture
-	merchant.Transactions[idx].Captured = merchant.Transactions[idx].Captured + amount
+	merchant.Transactions[idx].Authorized = merchant.Transactions[idx].Authorized - int(amount) // TODO handle over-capture
+	merchant.Transactions[idx].Captured = merchant.Transactions[idx].Captured + int(amount)
 	return db.StoreMerchant(merchant)
 }
 

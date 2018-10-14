@@ -23,7 +23,7 @@ func TestTopUpCard(t *testing.T) {
 			Convey("It's available balance is incremented by the amount", func() {
 				testCases := []struct {
 					Description         string
-					Amount              int
+					Amount              uint
 					InitialBalance      int
 					ExpectedBalance     int
 					InitialTotalLoaded  int

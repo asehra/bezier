@@ -28,7 +28,7 @@ func TestAuthorizeTransaction(t *testing.T) {
 			}
 
 			Convey("With Sufficient funds", func() {
-				transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, amount, idGenerator)
+				transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, uint(amount), idGenerator)
 				Convey("Transaction ID generted by the idGenerator is returned", func() {
 					So(transactionID, ShouldEqual, mockTransactionID)
 					So(err, ShouldBeNil)
@@ -36,7 +36,7 @@ func TestAuthorizeTransaction(t *testing.T) {
 			})
 			Convey("With Insufficient funds", func() {
 				amount := 1001
-				transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, amount, idGenerator)
+				transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, uint(amount), idGenerator)
 				Convey("Transaction ID generted by the idGenerator is returned", func() {
 					So(transactionID, ShouldEqual, "")
 					So(err, ShouldResemble, errors.New("insufficient funds"))
@@ -47,7 +47,7 @@ func TestAuthorizeTransaction(t *testing.T) {
 		Convey("On an invalid card", func() {
 			expectedError := errors.New("Bad card")
 			db.GetCardCall.Returns.Error = expectedError
-			transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, amount, idGenerator)
+			transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, uint(amount), idGenerator)
 			Convey("Transaction is declined with error", func() {
 				So(transactionID, ShouldEqual, "")
 				So(err, ShouldResemble, expectedError)
@@ -61,7 +61,7 @@ func TestAuthorizeTransaction(t *testing.T) {
 			}
 			expectedError := errors.New("Bad merchant")
 			db.GetMerchantCall.Returns.Error = expectedError
-			transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, amount, idGenerator)
+			transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, uint(amount), idGenerator)
 			Convey("Transaction is declined with error", func() {
 				So(transactionID, ShouldEqual, "")
 				So(err, ShouldResemble, expectedError)

@@ -25,7 +25,7 @@ func createMerchantHandler(config config.Config) func(*gin.Context) {
 type AuthorizeTransactionRequest struct {
 	CardNumber int64  `json:"card_number"`
 	MerchantID string `json:"merchant_id"`
-	Amount     int    `json:"amount"`
+	Amount     uint   `json:"amount"`
 }
 type AuthorizeTransactionResponse struct {
 	TransactionID string `json:"transaction_id"`
@@ -78,7 +78,7 @@ func merchantTransactionsHandler(config config.Config) func(*gin.Context) {
 type CaptureTransactionRequest struct {
 	MerchantID    string `json:"merchant_id"`
 	TransactionID string `json:"transaction_id"`
-	Amount        int    `json:"amount"`
+	Amount        uint   `json:"amount"`
 }
 
 func captureTransactionHandler(config config.Config) func(*gin.Context) {
