@@ -195,6 +195,11 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				CardNumber: mockCardNumber,
 				Authorized: 100,
 			}
+			db.StoreCard(model.Card{
+				Number:           mockCardNumber,
+				AvailableBalance: 1000,
+				BlockedBalance:   100,
+			})
 			db.StoreMerchant(model.Merchant{
 				ID:           mockMerchantID,
 				Transactions: []model.Transaction{authorizedTransaction},
@@ -216,6 +221,11 @@ func TestMerchantHandlersAPI(t *testing.T) {
 							Authorized: 30,
 							Captured:   70,
 						}})
+				})
+
+				Convey("Removes the captured amount from card's blocked balance", func() {
+					card, _ := db.GetCard(mockCardNumber)
+					So(card.BlockedBalance, ShouldEqual, 30)
 				})
 			})
 
@@ -263,6 +273,11 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				CardNumber: mockCardNumber,
 				Authorized: 100,
 			}
+			db.StoreCard(model.Card{
+				Number:           mockCardNumber,
+				AvailableBalance: 1000,
+				BlockedBalance:   100,
+			})
 			db.StoreMerchant(model.Merchant{
 				ID:           mockMerchantID,
 				Transactions: []model.Transaction{authorizedTransaction},
@@ -284,6 +299,12 @@ func TestMerchantHandlersAPI(t *testing.T) {
 							Authorized: 30,
 							Reversed:   70,
 						}})
+				})
+
+				Convey("Moves the amount from Card'ss blocked balance to available balance", func() {
+					card, _ := db.GetCard(mockCardNumber)
+					So(card.BlockedBalance, ShouldEqual, 30)
+					So(card.AvailableBalance, ShouldEqual, 1070)
 				})
 			})
 

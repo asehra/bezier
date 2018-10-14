@@ -26,6 +26,11 @@ func TestReverseTransaction(t *testing.T) {
 				Authorized: 100,
 			}},
 		}
+		db.GetCardCall.Returns.Card = model.Card{
+			Number:           cardNumber,
+			AvailableBalance: 200,
+			BlockedBalance:   150,
+		}
 
 		Convey("With full amount", func() {
 
@@ -37,6 +42,11 @@ func TestReverseTransaction(t *testing.T) {
 					Authorized: 0,
 					Reversed:   100,
 				}})
+			})
+
+			Convey("Moves reversed amount on card from blocked to available", func() {
+				So(db.StoreCardCall.Receives.Card.AvailableBalance, ShouldEqual, 300)
+				So(db.StoreCardCall.Receives.Card.BlockedBalance, ShouldEqual, 50)
 			})
 		})
 
@@ -50,13 +60,18 @@ func TestReverseTransaction(t *testing.T) {
 					Reversed:   60,
 				}})
 			})
+
+			Convey("Moves partially reversed amount on card from blocked to available", func() {
+				So(db.StoreCardCall.Receives.Card.AvailableBalance, ShouldEqual, 260)
+				So(db.StoreCardCall.Receives.Card.BlockedBalance, ShouldEqual, 90)
+			})
 		})
+
 		Convey("With more than authorized amount", func() {
 			err := service.ReverseTransaction(db, mockMerchantId, mockTransactionID, 110)
 			Convey("Error is raised", func() {
 				So(err, ShouldResemble, errors.New("can not over-reverse"))
 			})
-
 		})
 
 		Convey("With invalid merchant ID", func() {
@@ -77,6 +92,22 @@ func TestReverseTransaction(t *testing.T) {
 		Convey("And storing merchant raises error", func() {
 			db.StoreMerchantCall.Returns.Error = errors.New("something went wrong")
 			err := service.ReverseTransaction(db, "invalid ID", mockTransactionID, 50)
+			Convey("Error is raised", func() {
+				So(err, ShouldResemble, errors.New("something went wrong"))
+			})
+		})
+
+		Convey("And fetching card raises error", func() {
+			db.GetCardCall.Returns.Error = errors.New("something went wrong")
+			err := service.ReverseTransaction(db, mockMerchantId, mockTransactionID, 50)
+			Convey("Error is raised", func() {
+				So(err, ShouldResemble, errors.New("something went wrong"))
+			})
+		})
+
+		Convey("And storing card raises error", func() {
+			db.StoreCardCall.Returns.Error = errors.New("something went wrong")
+			err := service.ReverseTransaction(db, mockMerchantId, mockTransactionID, 50)
 			Convey("Error is raised", func() {
 				So(err, ShouldResemble, errors.New("something went wrong"))
 			})

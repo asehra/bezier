@@ -26,9 +26,13 @@ func TestCaptureTransaction(t *testing.T) {
 				Authorized: 100,
 			}},
 		}
+		db.GetCardCall.Returns.Card = model.Card{
+			Number:           cardNumber,
+			AvailableBalance: 200,
+			BlockedBalance:   150,
+		}
 
 		Convey("With full amount", func() {
-
 			service.CaptureTransaction(db, mockMerchantId, mockTransactionID, 100)
 			Convey("Full amount is moved to captured", func() {
 				So(db.StoreMerchantCall.Receives.Merchant.Transactions, ShouldResemble, []model.Transaction{{
@@ -37,6 +41,9 @@ func TestCaptureTransaction(t *testing.T) {
 					Authorized: 0,
 					Captured:   100,
 				}})
+			})
+			Convey("Full amount is deducted from the Card's blocked balance", func() {
+				So(db.StoreCardCall.Receives.Card.BlockedBalance, ShouldEqual, 50)
 			})
 		})
 
@@ -66,15 +73,33 @@ func TestCaptureTransaction(t *testing.T) {
 				So(err, ShouldResemble, errors.New("not found"))
 			})
 		})
+
 		Convey("And the transaction does not exist", func() {
 			err := service.CaptureTransaction(db, mockMerchantId, "bad transaction", 50)
 			Convey("Error is raised", func() {
 				So(err, ShouldResemble, errors.New("transaction not found"))
 			})
 		})
+
 		Convey("And storing merchant raises error", func() {
 			db.StoreMerchantCall.Returns.Error = errors.New("something went wrong")
 			err := service.CaptureTransaction(db, "invalid ID", mockTransactionID, 50)
+			Convey("Error is raised", func() {
+				So(err, ShouldResemble, errors.New("something went wrong"))
+			})
+		})
+
+		Convey("And fetching card raises error", func() {
+			db.GetCardCall.Returns.Error = errors.New("something went wrong")
+			err := service.CaptureTransaction(db, mockMerchantId, mockTransactionID, 50)
+			Convey("Error is raised", func() {
+				So(err, ShouldResemble, errors.New("something went wrong"))
+			})
+		})
+
+		Convey("And storing card raises error", func() {
+			db.StoreCardCall.Returns.Error = errors.New("something went wrong")
+			err := service.CaptureTransaction(db, mockMerchantId, mockTransactionID, 50)
 			Convey("Error is raised", func() {
 				So(err, ShouldResemble, errors.New("something went wrong"))
 			})
