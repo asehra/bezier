@@ -9,7 +9,10 @@ import (
 )
 
 func AuthorizeTransaction(db storage.Storage, cardNumber int64, merchantID string, amount int32, idGenerator generator.StringIDGenerator) (string, error) {
-	card, _ := db.GetCard(cardNumber) //TODO: handle error
+	card, err := db.GetCard(cardNumber)
+	if err != nil {
+		return "", err
+	}
 	if amount > card.AvailableBalance {
 		return "", errors.New("insufficient funds")
 	}
@@ -20,9 +23,14 @@ func AuthorizeTransaction(db storage.Storage, cardNumber int64, merchantID strin
 		CardNumber: cardNumber,
 		Amount:     amount,
 	}
-	merchant, _ := db.GetMerchant(merchantID) //TODO: handle error
+	merchant, err := db.GetMerchant(merchantID)
+	if err != nil {
+		return "", err
+	}
 	merchant.AuthorizedTransactions = append(merchant.AuthorizedTransactions, transaction)
-	db.StoreCard(card)         //TODO: handle error
-	db.StoreMerchant(merchant) //TODO: handle herror
+	{ // NOTE This should be transactional on a real system
+		db.StoreCard(card)         //TODO: handle error
+		db.StoreMerchant(merchant) //TODO: handle herror
+	}
 	return transaction.ID, nil
 }
