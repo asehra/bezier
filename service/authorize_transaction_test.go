@@ -18,7 +18,7 @@ func TestAuthorizeTransaction(t *testing.T) {
 		mockTransactionID := "transactionID"
 		cardNumber := int64(123456789012345)
 		merchantID := "M12345"
-		amount := int32(50)
+		amount := 50
 		idGenerator := &mock.StringIDGenerator{MockID: mockTransactionID}
 		db := &mock.Storage{}
 		Convey("On a valid card", func() {
@@ -35,7 +35,7 @@ func TestAuthorizeTransaction(t *testing.T) {
 				})
 			})
 			Convey("With Insufficient funds", func() {
-				amount := int32(1001)
+				amount := 1001
 				transactionID, err := service.AuthorizeTransaction(db, cardNumber, merchantID, amount, idGenerator)
 				Convey("Transaction ID generted by the idGenerator is returned", func() {
 					So(transactionID, ShouldEqual, "")

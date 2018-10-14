@@ -7,7 +7,7 @@ import (
 	"github.com/asehra/bezier/storage"
 )
 
-func CaptureTransaction(db storage.Storage, merchantID string, transactionID string, amount int32) error {
+func CaptureTransaction(db storage.Storage, merchantID string, transactionID string, amount int) error {
 	merchant, err := db.GetMerchant(merchantID)
 	if err != nil {
 		return err

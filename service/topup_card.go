@@ -2,7 +2,7 @@ package service
 
 import "github.com/asehra/bezier/storage"
 
-func TopUpCard(db storage.Storage, cardNumber int64, amount int32) error {
+func TopUpCard(db storage.Storage, cardNumber int64, amount int) error {
 	card, err := db.GetCard(cardNumber)
 	if err != nil {
 		return err

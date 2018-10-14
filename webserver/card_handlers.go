@@ -46,7 +46,7 @@ func getCardHandler(config config.Config) func(*gin.Context) {
 
 type TopUpCardRequest struct {
 	CardNumber int64 `json:"card_number"`
-	Amount     int32 `json:"amount"`
+	Amount     int   `json:"amount"`
 }
 
 func topUpCardHandler(config config.Config) func(*gin.Context) {

@@ -8,7 +8,7 @@ import (
 	"github.com/asehra/bezier/storage"
 )
 
-func AuthorizeTransaction(db storage.Storage, cardNumber int64, merchantID string, amount int32, idGenerator generator.StringIDGenerator) (string, error) {
+func AuthorizeTransaction(db storage.Storage, cardNumber int64, merchantID string, amount int, idGenerator generator.StringIDGenerator) (string, error) {
 	card, err := db.GetCard(cardNumber)
 	if err != nil {
 		return "", err
