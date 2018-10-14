@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/asehra/bezier/config"
@@ -89,7 +90,8 @@ func captureTransactionHandler(config config.Config) func(*gin.Context) {
 		}
 		err := service.CaptureTransaction(config.DB, params.MerchantID, params.TransactionID, params.Amount)
 		if err != nil {
-			panic("unhandled err")
+			c.String(http.StatusBadRequest, fmt.Sprintf(`{"error":"%s"}`, err.Error()))
+			return
 		}
 		c.JSON(http.StatusOK, "")
 	}

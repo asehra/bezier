@@ -176,7 +176,15 @@ func TestMerchantHandlersAPI(t *testing.T) {
 			})
 
 			Convey("When request is badly formed", func() {
-				// TODO Return bad data resposne
+				output := simulatePost(testConfig, "/v1/merchant/authorize-transaction", strings.NewReader("bad data"))
+				Convey("Returns 400", func() {
+					So(output.Code, ShouldEqual, 400)
+				})
+
+				Convey("Returns bad JSON response", func() {
+					bodyAsString := output.Body.String()
+					So(bodyAsString, ShouldEqual, `{"error":"bad JSON format"}`)
+				})
 			})
 		})
 
@@ -192,7 +200,31 @@ func TestMerchantHandlersAPI(t *testing.T) {
 				Transactions: []model.Transaction{authorizedTransaction},
 			})
 
-			Convey("Capture partial transaction", func() {
+			Convey("When capture is possible", func() {
+				requestBody := captureRequestBody(mockMerchantID, mockTransactionID, 170)
+				output := simulatePost(testConfig, "/v1/merchant/capture-transaction", requestBody)
+				Convey("Returns 400", func() {
+					So(output.Code, ShouldEqual, 400)
+				})
+				
+				Convey("Returns error message", func() {
+					bodyAsString := output.Body.String()
+					So(bodyAsString, ShouldEqual, `{"error":"can not over-capture"}`)
+				})
+
+				Convey("Leaves DB unaffected", func() {
+					merchant, _ := db.GetMerchant(mockMerchantID)
+					So(merchant.Transactions, ShouldResemble, []model.Transaction{
+						model.Transaction{
+							ID:         mockTransactionID,
+							CardNumber: mockCardNumber,
+							Authorized: 100,
+							Captured:   0,
+						}})
+				})
+			})
+
+			Convey("When capture is not possible", func() {
 				requestBody := captureRequestBody(mockMerchantID, mockTransactionID, 70)
 				output := simulatePost(testConfig, "/v1/merchant/capture-transaction", requestBody)
 				Convey("Returns 200", func() {
