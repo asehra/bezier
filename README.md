@@ -242,3 +242,11 @@ And the card can be used for more coffees!:
   "error": ""
 }
 ```
+
+## Development and testing
+
+Clone the repo and run `dep ensure` to get the dependencies
+
+Then to run tests, go to the root of the project and run `go test -v ./...`
+
+To start the server locally, run: `go run main.go`
